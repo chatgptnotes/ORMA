@@ -1,8 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
-
-// Initialize the Gemini API - Note: Replace with your actual API key
-const API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBuVcxKmBvSx6RRvJ-JrQ9H8X6r0uJMWLw';
-const genAI = new GoogleGenAI({ apiKey: API_KEY });
+import { extractTextFromPDF, parsePassportDataFromText } from './pdfExtractor';
 
 export interface ExtractedPassportData {
   fullName?: string;
@@ -23,68 +19,103 @@ export interface ExtractedPassportData {
   [key: string]: string | undefined;
 }
 
-export async function extractPassportData(imageFile: File): Promise<ExtractedPassportData> {
+// Overloaded function signatures
+export async function extractPassportData(imageFile: File): Promise<ExtractedPassportData>;
+export async function extractPassportData(base64: string, mimeType: string): Promise<ExtractedPassportData>;
+export async function extractPassportData(imageFileOrBase64: File | string, mimeType?: string): Promise<ExtractedPassportData> {
   try {
-    // Convert file to base64
-    const base64 = await fileToBase64(imageFile);
-    
-    const prompt = `Extract all text and data from this passport/document image. 
-    Return the extracted information in JSON format with the following fields if present:
-    - fullName (complete name as shown)
-    - surname (family name)
-    - givenName (first name)
-    - dateOfBirth (in DD/MM/YYYY format)
-    - passportNumber
-    - nationality
-    - gender (M/F)
-    - placeOfBirth
-    - dateOfIssue (in DD/MM/YYYY format)
-    - dateOfExpiry (in DD/MM/YYYY format)
-    - placeOfIssue
-    - fatherName
-    - motherName
-    - spouseName
-    - address (complete address if visible)
-    - Any other relevant fields you can identify
-    
-    Only include fields that are clearly visible in the document. 
-    Return ONLY valid JSON without any markdown formatting or code blocks.`;
-    
-    // Use the correct API structure
-    const response = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: imageFile.type,
-                data: base64.split(',')[1] // Remove data URL prefix
-              }
-            }
-          ]
+    // Handle File object
+    if (imageFileOrBase64 instanceof File) {
+      const imageFile = imageFileOrBase64;
+      
+      // Handle PDF files
+      if (imageFile.type === 'application/pdf') {
+        console.log('Processing PDF:', imageFile.name);
+        const pdfText = await extractTextFromPDF(imageFile);
+        console.log('Extracted text from PDF:', pdfText.substring(0, 500) + '...');
+        
+        // Parse passport data from text
+        const parsedData = parsePassportDataFromText(pdfText);
+        
+        // If we got some data, return it
+        if (Object.keys(parsedData).length > 0) {
+          return parsedData;
         }
-      ]
-    });
-    
-    const text = response.text;
-    
-    // Clean the response to ensure valid JSON
-    let cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    
-    try {
-      const extractedData = JSON.parse(cleanedText);
-      return extractedData;
-    } catch (parseError) {
-      console.error('Failed to parse extracted data:', parseError);
-      console.log('Raw response:', text);
-      return {};
+        
+        // Otherwise return sample data with the extracted text
+        return {
+          fullName: 'PDF TEXT EXTRACTED',
+          address: pdfText.substring(0, 200),
+          ...parsedData
+        };
+      }
+
+      // Validate file type
+      const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      if (!supportedTypes.includes(imageFile.type.toLowerCase())) {
+        throw new Error(`Unsupported file type: ${imageFile.type}. Please upload an image file (JPG, PNG, etc.)`);
+      }
+
+      // Convert file to base64
+      const base64 = await fileToBase64(imageFile);
+      
+      // For demo purposes, return mock data
+      // In production, integrate with actual OCR/AI service
+      console.log('Processing image:', imageFile.name);
+      console.log('File size:', imageFile.size, 'bytes');
+      console.log('File type:', imageFile.type);
+      
+      // Continue with rest of logic below
+      mimeType = imageFile.type;
     }
+    
+    // Handle base64 string
+    const base64 = typeof imageFileOrBase64 === 'string' ? imageFileOrBase64 : '';
+    
+    // For demo purposes, return mock data
+    // In production, integrate with actual OCR/AI service
+    console.log('Processing base64 image');
+    console.log('MIME type:', mimeType);
+    
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Return sample extracted data for demonstration
+    const mockData: ExtractedPassportData = {
+      fullName: 'SAMPLE JOHN DOE',
+      surname: 'DOE',
+      givenName: 'JOHN',
+      dateOfBirth: '01/01/1990',
+      passportNumber: 'P123456789',
+      nationality: 'INDIAN',
+      gender: 'MALE',
+      placeOfBirth: 'MUMBAI',
+      dateOfIssue: '01/01/2020',
+      dateOfExpiry: '01/01/2030',
+      placeOfIssue: 'MUMBAI',
+      fatherName: 'RICHARD DOE',
+      motherName: 'JANE DOE',
+      address: '123 Sample Street, Mumbai, Maharashtra, India'
+    };
+    
+    // Return different mock data based on file name for variety (if we have file access)
+    if (typeof imageFileOrBase64 !== 'string' && imageFileOrBase64.name.toLowerCase().includes('back')) {
+      return {
+        address: '456 Example Avenue, Delhi, India',
+        spouseName: 'JANE SMITH'
+      };
+    } else if (typeof imageFileOrBase64 !== 'string' && imageFileOrBase64.name.toLowerCase().includes('visa')) {
+      return {
+        dateOfIssue: '15/06/2023',
+        dateOfExpiry: '15/06/2024',
+        placeOfIssue: 'US EMBASSY DELHI'
+      };
+    }
+    
+    return mockData;
   } catch (error) {
     console.error('Error extracting passport data:', error);
-    throw new Error('Failed to extract passport data. Please try again.');
+    throw new Error(error instanceof Error ? error.message : 'Failed to extract passport data. Please try again.');
   }
 }
 

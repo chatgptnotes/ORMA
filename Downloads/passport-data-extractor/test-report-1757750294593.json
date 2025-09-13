@@ -1,0 +1,364 @@
+{
+  "timestamp": "2025-09-13T07:58:14.577Z",
+  "tests": [
+    {
+      "name": "File exists: src/App.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.590Z"
+    },
+    {
+      "name": "File exists: src/main.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.590Z"
+    },
+    {
+      "name": "File exists: src/contexts/SimpleAuthContext.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/lib/supabase.ts",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/services/passportExtractor.ts",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/components/ExtractorApp.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/pages/LandingPage.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/pages/LoginPage.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/pages/RegisterPage.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/pages/Dashboard.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/pages/ApplicationForm.tsx",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: src/data/processedFormData.json",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: package.json",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "File exists: .env.local",
+      "status": "pass",
+      "message": "File found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "Build artifacts",
+      "status": "pass",
+      "message": "Found 2 files in dist/",
+      "details": [
+        "assets",
+        "index.html"
+      ],
+      "timestamp": "2025-09-13T07:58:14.591Z"
+    },
+    {
+      "name": "Form field count",
+      "status": "pass",
+      "message": "Found exactly 43 fields as required",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Form field structure",
+      "status": "pass",
+      "message": "Fields have required properties",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Form input types",
+      "status": "pass",
+      "message": "Found 6 different input types",
+      "details": [
+        "select",
+        "checkbox",
+        "radio",
+        "text",
+        "tel",
+        "date"
+      ],
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Important field: ORGANISATION",
+      "status": "pass",
+      "message": "Found with type: select",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Important field: Apply For",
+      "status": "warning",
+      "message": "Field not found in form data",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Important field: Name (Full)",
+      "status": "warning",
+      "message": "Field not found in form data",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Important field: Passport No",
+      "status": "warning",
+      "message": "Field not found in form data",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Important field: Date of Birth",
+      "status": "warning",
+      "message": "Field not found in form data",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Important field: NATIONALITY",
+      "status": "warning",
+      "message": "Field not found in form data",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Environment variable: VITE_SUPABASE_URL",
+      "status": "pass",
+      "message": "Present with valid value",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Environment variable: VITE_SUPABASE_ANON_KEY",
+      "status": "pass",
+      "message": "Present with valid value",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Environment variable: GEMINI_API_KEY",
+      "status": "pass",
+      "message": "Present with valid value",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Dependency: @supabase/supabase-js",
+      "status": "pass",
+      "message": "Present",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Dependency: react",
+      "status": "pass",
+      "message": "Present",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Dependency: react-dom",
+      "status": "pass",
+      "message": "Present",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Dependency: react-router-dom",
+      "status": "pass",
+      "message": "Present",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Dependency: tailwindcss",
+      "status": "pass",
+      "message": "Present",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Dependency: lucide-react",
+      "status": "pass",
+      "message": "Present",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Dependency: vite",
+      "status": "pass",
+      "message": "Present",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Script: dev",
+      "status": "pass",
+      "message": "vite",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Script: build",
+      "status": "pass",
+      "message": "vite build",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Script: preview",
+      "status": "pass",
+      "message": "vite preview",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Component imports: src/App.tsx",
+      "status": "pass",
+      "message": "All expected imports found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Component export: src/App.tsx",
+      "status": "warning",
+      "message": "Non-standard component export pattern",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Component imports: src/components/ExtractorApp.tsx",
+      "status": "pass",
+      "message": "All expected imports found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Component export: src/components/ExtractorApp.tsx",
+      "status": "pass",
+      "message": "Proper React component export",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.592Z"
+    },
+    {
+      "name": "Component imports: src/pages/LandingPage.tsx",
+      "status": "pass",
+      "message": "All expected imports found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    },
+    {
+      "name": "Component export: src/pages/LandingPage.tsx",
+      "status": "pass",
+      "message": "Proper React component export",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    },
+    {
+      "name": "Route: /",
+      "status": "pass",
+      "message": "Route definition found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    },
+    {
+      "name": "Route: /login",
+      "status": "pass",
+      "message": "Route definition found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    },
+    {
+      "name": "Route: /register",
+      "status": "pass",
+      "message": "Route definition found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    },
+    {
+      "name": "Route: /dashboard",
+      "status": "pass",
+      "message": "Route definition found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    },
+    {
+      "name": "Route: /apply",
+      "status": "pass",
+      "message": "Route definition found",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    },
+    {
+      "name": "Protected routes",
+      "status": "pass",
+      "message": "ProtectedRoute component used",
+      "details": null,
+      "timestamp": "2025-09-13T07:58:14.593Z"
+    }
+  ],
+  "summary": {
+    "total": 49,
+    "passed": 43,
+    "failed": 0,
+    "warnings": 6
+  }
+}

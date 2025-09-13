@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FormField } from '../types/formTypes';
 import { extractPassportData, mapPassportToFormFields } from '../services/passportExtractor';
+import { extractTextFromPDF } from '../services/pdfExtractor';
+import ExtractedTextDisplay from './ExtractedTextDisplay';
 import './FormBuilder.css';
 
 interface FormBuilderProps {
@@ -15,8 +17,11 @@ interface FormBuilderProps {
 const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialValues = {} }) => {
   const [formValues, setFormValues] = useState<Record<string, any>>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isExtracting, setIsExtracting] = useState(false);
+  const [isExtracting, setIsExtracting] = useState<{ [key: string]: boolean }>({});
   const [extractionError, setExtractionError] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>({});
+  const [extractedText, setExtractedText] = useState<string>('');
+  const [lastPDFName, setLastPDFName] = useState<string>('');
 
   useEffect(() => {
     setFormValues(initialValues);
@@ -85,18 +90,26 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePassportUpload = async (file: File) => {
-    setIsExtracting(true);
+  const handlePassportUpload = async (file: File, pageType: string) => {
+    setIsExtracting({ ...isExtracting, [pageType]: true });
     setExtractionError(null);
+    setUploadedFiles({ ...uploadedFiles, [pageType]: file });
     
     try {
+      // If it's a PDF, also extract and display the text
+      if (file.type === 'application/pdf') {
+        const pdfText = await extractTextFromPDF(file);
+        setExtractedText(pdfText);
+        setLastPDFName(file.name);
+      }
+      
       const extractedData = await extractPassportData(file);
       const mappedData = mapPassportToFormFields(extractedData, formValues);
       setFormValues(mappedData);
-      setIsExtracting(false);
+      setIsExtracting({ ...isExtracting, [pageType]: false });
     } catch (error) {
       setExtractionError(error instanceof Error ? error.message : 'Failed to extract data');
-      setIsExtracting(false);
+      setIsExtracting({ ...isExtracting, [pageType]: false });
     }
   };
 
@@ -236,35 +249,137 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       <div className="passport-upload-section">
         <div className="upload-header">
           <h3>Quick Fill from Document</h3>
-          <p>Upload a passport or ID document to automatically fill the form</p>
+          <p>Upload passport pages or ID documents to automatically fill the form</p>
         </div>
         
-        <div className="upload-area">
-          <input
-            type="file"
-            id="passport-upload"
-            accept="image/*,.pdf"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                handlePassportUpload(file);
-              }
-            }}
-            disabled={isExtracting}
-            style={{ display: 'none' }}
-          />
-          <label htmlFor="passport-upload" className={`upload-button ${isExtracting ? 'disabled' : ''}`}>
-            {isExtracting ? (
-              <>
-                <span className="spinner"></span>
-                Extracting data...
-              </>
-            ) : (
-              <>
-                📄 Upload Document
-              </>
-            )}
-          </label>
+        <div className="upload-grid">
+          {/* Front Page Upload */}
+          <div className="upload-card">
+            <h4>📘 Front Page</h4>
+            <p>Main page with photo & details</p>
+            <input
+              type="file"
+              id="passport-front"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handlePassportUpload(file, 'front');
+                }
+              }}
+              disabled={isExtracting.front}
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="passport-front" className={`upload-btn ${isExtracting.front ? 'disabled' : ''} ${uploadedFiles.front ? 'uploaded' : ''}`}>
+              {isExtracting.front ? (
+                <>
+                  <span className="spinner"></span>
+                  Extracting...
+                </>
+              ) : uploadedFiles.front ? (
+                <>✅ {uploadedFiles.front.name}</>
+              ) : (
+                <>📷 Upload Front</>
+              )}
+            </label>
+          </div>
+
+          {/* Back Page Upload */}
+          <div className="upload-card">
+            <h4>📗 Back Page</h4>
+            <p>Address & additional info</p>
+            <input
+              type="file"
+              id="passport-back"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handlePassportUpload(file, 'back');
+                }
+              }}
+              disabled={isExtracting.back}
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="passport-back" className={`upload-btn ${isExtracting.back ? 'disabled' : ''} ${uploadedFiles.back ? 'uploaded' : ''}`}>
+              {isExtracting.back ? (
+                <>
+                  <span className="spinner"></span>
+                  Extracting...
+                </>
+              ) : uploadedFiles.back ? (
+                <>✅ {uploadedFiles.back.name}</>
+              ) : (
+                <>📷 Upload Back</>
+              )}
+            </label>
+          </div>
+
+          {/* Visa/Stamp Page Upload */}
+          <div className="upload-card">
+            <h4>📙 Visa/Stamps</h4>
+            <p>Visa or entry stamps page</p>
+            <input
+              type="file"
+              id="passport-visa"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handlePassportUpload(file, 'visa');
+                }
+              }}
+              disabled={isExtracting.visa}
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="passport-visa" className={`upload-btn ${isExtracting.visa ? 'disabled' : ''} ${uploadedFiles.visa ? 'uploaded' : ''}`}>
+              {isExtracting.visa ? (
+                <>
+                  <span className="spinner"></span>
+                  Extracting...
+                </>
+              ) : uploadedFiles.visa ? (
+                <>✅ {uploadedFiles.visa.name}</>
+              ) : (
+                <>📷 Upload Visa</>
+              )}
+            </label>
+          </div>
+
+          {/* Other Documents */}
+          <div className="upload-card">
+            <h4>📄 Other Docs</h4>
+            <p>ID card, license, etc.</p>
+            <input
+              type="file"
+              id="passport-other"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handlePassportUpload(file, 'other');
+                }
+              }}
+              disabled={isExtracting.other}
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="passport-other" className={`upload-btn ${isExtracting.other ? 'disabled' : ''} ${uploadedFiles.other ? 'uploaded' : ''}`}>
+              {isExtracting.other ? (
+                <>
+                  <span className="spinner"></span>
+                  Extracting...
+                </>
+              ) : uploadedFiles.other ? (
+                <>✅ {uploadedFiles.other.name}</>
+              ) : (
+                <>📷 Upload Other</>
+              )}
+            </label>
+          </div>
+        </div>
+        
+        <div className="upload-hint">
+          Supports: JPG, PNG, WebP, PDF • Max 10MB per file
         </div>
         
         {extractionError && (
@@ -273,14 +388,19 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           </div>
         )}
         
-        {!isExtracting && !extractionError && formValues.fullName && (
+        {Object.keys(uploadedFiles).length > 0 && !extractionError && (
           <div className="extraction-success">
-            ✅ Document data extracted successfully!
+            ✅ {Object.keys(uploadedFiles).length} document(s) processed successfully!
           </div>
         )}
       </div>
       
       <hr className="divider" />
+      
+      {/* Display extracted text from PDF */}
+      {extractedText && (
+        <ExtractedTextDisplay text={extractedText} fileName={lastPDFName} />
+      )}
       
       <form onSubmit={handleSubmit}>
         {formData.fields.map((field, index) => (
