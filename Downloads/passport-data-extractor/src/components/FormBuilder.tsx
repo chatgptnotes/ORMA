@@ -216,7 +216,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                   name={fieldKey}
                   value={option}
                   checked={value === option}
-                  onChange={(e) => handleChange(fieldKey, e.target.value))
+                  onChange={(e) => handleChange(fieldKey, e.target.value)}
                 />
                 <span>{option}</span>
               </label>
@@ -260,7 +260,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                 placeholder="Please specify"
                 className="form-input other-input"
                 style={{ marginTop: '0.5rem' }}
-                onChange={(e) => handleChange(`${fieldKey}_other`, e.target.value))
+                onChange={(e) => handleChange(`${fieldKey}_other`, e.target.value)}
               />
             )}
           </>
@@ -272,7 +272,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             type="date"
             className="form-input"
             value={value}
-            onChange={(e) => handleChange(fieldKey, e.target.value))
+            onChange={(e) => handleChange(fieldKey, e.target.value)}
           />
         );
       
@@ -283,7 +283,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             className="form-input"
             placeholder={field.comment || 'Enter phone number'}
             value={value}
-            onChange={(e) => handleChange(fieldKey, e.target.value))
+            onChange={(e) => handleChange(fieldKey, e.target.value)}
           />
         );
       
@@ -294,7 +294,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             className="form-input"
             placeholder="Enter email address"
             value={value}
-            onChange={(e) => handleChange(fieldKey, e.target.value))
+            onChange={(e) => handleChange(fieldKey, e.target.value)}
           />
         );
       
@@ -320,7 +320,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             className="form-input"
             placeholder={field.comment || 'Enter number'}
             value={value}
-            onChange={(e) => handleChange(fieldKey, e.target.value))
+            onChange={(e) => handleChange(fieldKey, e.target.value)}
           />
         );
       
@@ -331,7 +331,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             className="form-input"
             placeholder={field.comment || ''}
             value={value}
-            onChange={(e) => handleChange(fieldKey, e.target.value))
+            onChange={(e) => handleChange(fieldKey, e.target.value)}
           />
         );
     }
