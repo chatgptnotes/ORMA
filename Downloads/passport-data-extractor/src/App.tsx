@@ -19,15 +19,13 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           
+          {/* Application Form - Public for development */}
+          <Route path="/apply" element={<ApplicationForm />} />
+          
           {/* Protected Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/apply" element={
-            <ProtectedRoute>
-              <ApplicationForm />
             </ProtectedRoute>
           } />
           
