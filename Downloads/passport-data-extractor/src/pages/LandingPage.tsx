@@ -14,11 +14,12 @@ const LandingPage: React.FC = () => {
               <span className="text-2xl font-bold text-gray-900">PassportAI for ORMA</span>
             </div>
             <div className="flex items-center space-x-4">
-              <Link to="/login" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
-                Login
+              <Link to="/apply" className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium flex items-center">
+                <FileText className="h-4 w-4 mr-2" />
+                Open Application Form
               </Link>
-              <Link to="/register" className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-md text-sm font-medium">
-                Get Started
+              <Link to="/dashboard" className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-md text-sm font-medium">
+                Dashboard
               </Link>
             </div>
           </div>
@@ -40,15 +41,16 @@ const LandingPage: React.FC = () => {
                 </p>
                 <div className="mt-5 sm:mt-8 sm:flex sm:justify-center lg:justify-start">
                   <div className="rounded-md shadow">
-                    <Link to="/register" className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 md:py-4 md:text-lg md:px-10">
-                      Start Free Trial
-                      <ArrowRight className="ml-2 h-5 w-5" />
+                    <Link to="/apply" className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 md:py-4 md:text-lg md:px-10">
+                      Open Application Form
+                      <FileText className="ml-2 h-5 w-5" />
                     </Link>
                   </div>
                   <div className="mt-3 sm:mt-0 sm:ml-3">
-                    <a href="#features" className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg md:px-10">
-                      Learn More
-                    </a>
+                    <Link to="/dashboard" className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 md:py-4 md:text-lg md:px-10">
+                      View Dashboard
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
                   </div>
                 </div>
               </div>
