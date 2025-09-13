@@ -14,9 +14,10 @@ interface FormBuilderProps {
   };
   onSubmit: (values: Record<string, any>) => void;
   initialValues?: Record<string, any>;
+  isAdmin?: boolean;
 }
 
-const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialValues = {} }) => {
+const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialValues = {}, isAdmin = false }) => {
   const [formValues, setFormValues] = useState<Record<string, any>>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isExtracting, setIsExtracting] = useState<{ [key: string]: boolean }>({});
@@ -54,22 +55,24 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     }
   };
 
-  const handleChange = (fieldLabel: string, value: any) => {
+  const handleChange = (fieldKey: string, value: any) => {
+    console.log(`Field change: ${fieldKey} =`, value); // Debug logging
     setFormValues(prev => ({
       ...prev,
-      [fieldLabel]: value
+      [fieldKey]: value
     }));
     // Clear error when user starts typing
-    if (errors[fieldLabel]) {
+    if (errors[fieldKey]) {
       setErrors(prev => ({
         ...prev,
-        [fieldLabel]: ''
+        [fieldKey]: ''
       }));
     }
   };
 
-  const handleCheckboxChange = (fieldLabel: string, option: string, checked: boolean) => {
-    const currentValues = formValues[fieldLabel] || [];
+  const handleCheckboxChange = (fieldKey: string, option: string, checked: boolean) => {
+    console.log(`Checkbox change: ${fieldKey} option: ${option} checked: ${checked}`); // Debug logging
+    const currentValues = Array.isArray(formValues[fieldKey]) ? formValues[fieldKey] : [];
     let newValues: string[];
     
     if (checked) {
@@ -78,21 +81,23 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       newValues = currentValues.filter((v: string) => v !== option);
     }
     
-    handleChange(fieldLabel, newValues);
+    console.log(`New checkbox values for ${fieldKey}:`, newValues); // Debug logging
+    handleChange(fieldKey, newValues);
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
-    formData.fields.forEach(field => {
+    fields.forEach(field => {
       // Skip optional fields
       if (field.type.includes('optional')) return;
       
-      const value = formValues[field.label];
+      const fieldKey = field.label || field.type || `field_${formData?.inputForm?.fields?.indexOf(field) || 0}`;
+      const value = formValues[fieldKey];
       
       if (!value || (Array.isArray(value) && value.length === 0)) {
         if (field.inputType !== 'file') {
-          newErrors[field.label] = `${field.label} is required`;
+          newErrors[fieldKey] = `${field.label || field.type} is required`;
         }
       }
       
@@ -100,7 +105,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       if (field.inputType === 'email' && value) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
-          newErrors[field.label] = 'Please enter a valid email address';
+          newErrors[fieldKey] = 'Please enter a valid email address';
         }
       }
       
@@ -108,7 +113,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       if (field.inputType === 'tel' && value) {
         const phoneRegex = /^\+?[\d\s-()]+$/;
         if (!phoneRegex.test(value)) {
-          newErrors[field.label] = 'Please enter a valid phone number';
+          newErrors[fieldKey] = 'Please enter a valid phone number';
         }
       }
     });
@@ -147,8 +152,58 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     }
   };
 
-  const renderField = (field: FormField) => {
-    const value = formValues[field.label] || '';
+  const handleSave = () => {
+    // Save form data to local storage or backend
+    localStorage.setItem('orma-form-data', JSON.stringify(formValues));
+    alert('Form data saved successfully!');
+  };
+
+  const handlePrint = () => {
+    // Create a printable version of the form
+    const printContent = document.createElement('div');
+    printContent.innerHTML = `
+      <h1>ORMA Kshemanidhi Application Form</h1>
+      <div style="margin: 20px 0;">
+        ${Object.entries(formValues)
+          .filter(([key, value]) => value && value !== '')
+          .map(([key, value]) => `
+            <div style="margin: 10px 0; border-bottom: 1px solid #eee; padding: 10px 0;">
+              <strong>${key}:</strong> ${Array.isArray(value) ? value.join(', ') : String(value)}
+            </div>
+          `).join('')}
+      </div>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>ORMA Application Form</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              h1 { color: #333; }
+              strong { color: #666; }
+            </style>
+          </head>
+          <body>
+            ${printContent.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
+
+  const renderField = (field: FormField, fieldIndex?: number) => {
+    const fieldKey = field.label || field.type || `field_${fieldIndex || 0}`;
+    const value = formValues[fieldKey] || '';
+    
+    // Debug logging for problematic fields
+    if (!field.label || field.label.trim() === '') {
+      console.warn(`Field with empty label found:`, field, `Using key: ${fieldKey}`);
+    }
     
     switch (field.inputType) {
       case 'radio':
@@ -158,10 +213,10 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <label key={option} className="radio-label">
                 <input
                   type="radio"
-                  name={field.label}
+                  name={fieldKey}
                   value={option}
                   checked={value === option}
-                  onChange={(e) => handleChange(field.label, e.target.value)}
+                  onChange={(e) => handleChange(fieldKey, e.target.value))
                 />
                 <span>{option}</span>
               </label>
@@ -177,8 +232,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                 <input
                   type="checkbox"
                   value={option}
-                  checked={(value || []).includes(option)}
-                  onChange={(e) => handleCheckboxChange(field.label, option, e.target.checked)}
+                  checked={(Array.isArray(value) ? value : []).includes(option)}
+                  onChange={(e) => handleCheckboxChange(fieldKey, option, e.target.checked)}
                 />
                 <span>{option}</span>
               </label>
@@ -192,7 +247,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             <select
               className="form-select"
               value={value}
-              onChange={(e) => handleChange(field.label, e.target.value)}
+              onChange={(e) => handleChange(fieldKey, e.target.value)}
             >
               <option value="">Select an option</option>
               {field.options?.map(option => (
@@ -205,7 +260,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                 placeholder="Please specify"
                 className="form-input other-input"
                 style={{ marginTop: '0.5rem' }}
-                onChange={(e) => handleChange(`${field.label}_other`, e.target.value)}
+                onChange={(e) => handleChange(`${fieldKey}_other`, e.target.value))
               />
             )}
           </>
@@ -217,7 +272,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             type="date"
             className="form-input"
             value={value}
-            onChange={(e) => handleChange(field.label, e.target.value)}
+            onChange={(e) => handleChange(fieldKey, e.target.value))
           />
         );
       
@@ -228,7 +283,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             className="form-input"
             placeholder={field.comment || 'Enter phone number'}
             value={value}
-            onChange={(e) => handleChange(field.label, e.target.value)}
+            onChange={(e) => handleChange(fieldKey, e.target.value))
           />
         );
       
@@ -239,7 +294,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             className="form-input"
             placeholder="Enter email address"
             value={value}
-            onChange={(e) => handleChange(field.label, e.target.value)}
+            onChange={(e) => handleChange(fieldKey, e.target.value))
           />
         );
       
@@ -252,9 +307,20 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) {
-                handleChange(field.label, file.name);
+                handleChange(fieldKey, file.name);
               }
             }}
+          />
+        );
+        
+      case 'number':
+        return (
+          <input
+            type="number"
+            className="form-input"
+            placeholder={field.comment || 'Enter number'}
+            value={value}
+            onChange={(e) => handleChange(fieldKey, e.target.value))
           />
         );
       
@@ -265,7 +331,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             className="form-input"
             placeholder={field.comment || ''}
             value={value}
-            onChange={(e) => handleChange(field.label, e.target.value)}
+            onChange={(e) => handleChange(fieldKey, e.target.value))
           />
         );
     }
@@ -476,59 +542,64 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         {fields && fields.length > 0 ? (
           fields.map((field, index) => (
           <div key={index} className="form-field" style={{ position: 'relative' }}>
-            <div style={{ 
-              position: 'absolute', 
-              right: '0', 
-              top: '0',
-              display: 'flex',
-              gap: '0.25rem'
-            }}>
-              <button
-                type="button"
-                onClick={() => moveFieldUp(index)}
-                disabled={index === 0}
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  background: index === 0 ? '#ccc' : '#667eea',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: index === 0 ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem'
-                }}
-                title="Move up"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                onClick={() => moveFieldDown(index)}
-                disabled={index === fields.length - 1}
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  background: index === fields.length - 1 ? '#ccc' : '#667eea',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: index === fields.length - 1 ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem'
-                }}
-                title="Move down"
-              >
-                ↓
-              </button>
-            </div>
+            {isAdmin && (
+              <div style={{ 
+                position: 'absolute', 
+                right: '0', 
+                top: '0',
+                display: 'flex',
+                gap: '0.25rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => moveFieldUp(index)}
+                  disabled={index === 0}
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    background: index === 0 ? '#ccc' : '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: index === 0 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                  title="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveFieldDown(index)}
+                  disabled={index === fields.length - 1}
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    background: index === fields.length - 1 ? '#ccc' : '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: index === fields.length - 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                  title="Move down"
+                >
+                  ↓
+                </button>
+              </div>
+            )}
             <label className="form-label">
-              {field.label}
+              {field.label || field.type}
               {!field.type.includes('optional') && <span className="required">*</span>}
             </label>
             {field.type && field.type !== field.label && (
               <small className="field-description">{field.type}</small>
             )}
-            {renderField(field)}
-            {errors[field.label] && (
-              <span className="error-message">{errors[field.label]}</span>
-            )}
+            {renderField(field, index)}
+            {(() => {
+              const fieldKey = field.label || field.type || `field_${index}`;
+              return errors[fieldKey] && (
+                <span className="error-message">{errors[fieldKey]}</span>
+              );
+            })()}
             {field.comment && (
               <small className="field-comment">{field.comment}</small>
             )}
@@ -541,9 +612,73 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           </div>
         )}
         
-        <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
-            Preview & Submit
+        <div className="form-actions" style={{ 
+          display: 'flex', 
+          gap: '1rem', 
+          justifyContent: 'center',
+          marginTop: '2rem',
+          padding: '1rem'
+        }}>
+          <button 
+            type="button" 
+            onClick={handleSave}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#218838'}
+            onMouseOut={(e) => e.currentTarget.style.background = '#28a745'}
+          >
+            💾 Save Draft
+          </button>
+          
+          <button 
+            type="submit" 
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#0056b3'}
+            onMouseOut={(e) => e.currentTarget.style.background = '#007bff'}
+          >
+            📤 Submit Application
+          </button>
+          
+          <button 
+            type="button" 
+            onClick={handlePrint}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#6c757d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '500',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#545b62'}
+            onMouseOut={(e) => e.currentTarget.style.background = '#6c757d'}
+          >
+            🖨️ Print Form
           </button>
         </div>
       </form>

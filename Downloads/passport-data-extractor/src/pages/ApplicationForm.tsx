@@ -65,6 +65,7 @@ const ApplicationForm: React.FC = () => {
             <FormBuilder 
               formData={formData} 
               onSubmit={handleFormSubmit}
+              isAdmin={false}
             />
           </>
         ) : (

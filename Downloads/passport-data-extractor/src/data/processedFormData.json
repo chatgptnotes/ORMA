@@ -93,199 +93,200 @@
         "inputType": "text"
       },
       {
-        "label": "",
+        "label": "First Name",
         "type": "First Name:(Given Name in the Passport)",
         "comment": "",
         "inputType": "text"
       },
       {
-        "label": "",
+        "label": "Middle Name",
         "type": "Middle Name:",
         "comment": "",
         "inputType": "text"
       },
       {
-        "label": "",
+        "label": "Last Name",
         "type": "Last Name (Surname in the PP) :",
         "comment": "",
         "inputType": "text"
       },
       {
-        "label": 2,
+        "label": "UAE Mobile Number",
         "type": "UAE Mobile Number:",
         "comment": "Input  digit mobile number  by customer (stating with 5xxxxxxxx. Country code will be there",
         "inputType": "tel"
       },
       {
-        "label": 3,
+        "label": "WhatsApp Number",
         "type": "WhatsApp Number:",
         "comment": "Input with country code",
-        "inputType": "text"
+        "inputType": "tel"
       },
       {
-        "label": 4,
+        "label": "Permanent Residence Address",
         "type": "Permament Residence Address :",
         "comment": "Autofill from Ppassport address page but editable",
         "inputType": "text"
       },
       {
-        "label": 5,
+        "label": "PIN Code",
         "type": "PINcode",
         "comment": "Autofill from Ppassport address page but editable",
         "inputType": "text"
       },
       {
-        "label": 6,
+        "label": "Email ID",
         "type": "email id",
         "comment": "input",
-        "inputType": "text"
+        "inputType": "email"
       },
       {
-        "label": 7,
+        "label": "Indian Active Mobile Number",
         "type": "Indian Active Mobile Number ",
         "comment": "input",
-        "inputType": "text"
+        "inputType": "tel"
       },
       {
-        "label": "",
+        "label": "Local Body Type",
         "type": "Local Body Type",
-        "comment": "Panchayath/Muncipality/Corporation (list)",
-        "inputType": "text"
+        "comment": "Panchayath/Municipality/Corporation",
+        "inputType": "select",
+        "options": ["Panchayath", "Municipality", "Corporation"]
       },
       {
-        "label": 8,
+        "label": "Taluk",
         "type": "Taluk",
         "comment": "Input",
         "inputType": "text"
       },
       {
-        "label": 9,
+        "label": "Village",
         "type": "Village",
         "comment": "Input",
         "inputType": "text"
       },
       {
-        "label": 10,
-        "type": "Name of Panchayath/Muncipality/Corporation",
+        "label": "Local Body Name",
+        "type": "Name of Panchayath/Municipality/Corporation",
         "comment": "Input",
         "inputType": "text"
       },
       {
-        "label": 11,
+        "label": "District",
         "type": "District ",
         "comment": "Input",
         "inputType": "text"
       },
       {
-        "label": 12,
+        "label": "Current Residence Address (Abroad)",
         "type": "Abroad Current Residence address ",
         "comment": "input",
         "inputType": "text"
       },
       {
-        "label": 13,
+        "label": "Aadhaar Number",
         "type": "Aadhar number",
         "comment": "Autofill if Aadhar copy uploaded",
         "inputType": "text"
       },
       {
-        "label": "",
+        "label": "Nominee Details Section",
         "type": "Nominee Details ",
-        "comment": "",
+        "comment": "Enter nominee information",
         "inputType": "text"
       },
       {
-        "label": "",
+        "label": "Nominee Date of Birth",
         "type": " Nominee name ",
         "comment": "DOB",
         "inputType": "date"
       },
       {
-        "label": "",
+        "label": "Nominee 1 Name",
         "type": "1",
-        "comment": "",
+        "comment": "First nominee details",
         "inputType": "text"
       },
       {
-        "label": "",
+        "label": "Nominee 2 Name",
         "type": "2",
-        "comment": "",
+        "comment": "Second nominee details",
         "inputType": "text"
       },
       {
-        "label": "",
+        "label": "Nominee 3 Name",
         "type": "3",
-        "comment": "",
+        "comment": "Third nominee details",
         "inputType": "text"
       },
       {
-        "label": 12,
+        "label": "Form Collected By",
         "type": "Form Collected by ",
         "comment": "Input",
         "inputType": "text"
       },
       {
-        "label": 13,
+        "label": "Uploaded Copies",
         "type": "Uploaded Copies",
-        "comment": "",
+        "comment": "List of uploaded documents",
         "inputType": "text"
       },
       {
-        "label": 14,
+        "label": "Visa Number",
         "type": "VISA Number",
         "comment": "Auto filled from EID or VISA copy ( UIDNO)",
         "inputType": "text"
       },
       {
-        "label": 15,
+        "label": "Sponsor/Company Name",
         "type": "SPONSOR / COMPANY NAME",
         "comment": "Auto fill from Sponsor name in VISA copy or Employer Name from Emirates ID)",
         "inputType": "text"
       },
       {
-        "label": 16,
+        "label": "Visa Expiry Date",
         "type": "VISA Expiry Date",
         "comment": "Auto fill from  VISA copy or  from Emirates ID)",
-        "inputType": "text"
+        "inputType": "date"
       },
       {
-        "label": "",
+        "label": "Occupation",
         "type": "Occupation ",
         "comment": "Auto fill Visa copy or Occupation from Emirates ID",
         "inputType": "text"
       },
       {
-        "label": 17,
+        "label": "Passport Number",
         "type": "Passport Number",
         "comment": "Auto fill from Passport",
         "inputType": "text"
       },
       {
-        "label": 18,
+        "label": "Passport Issue Date",
         "type": "Passport Issue Date",
         "comment": "Auto fill from Passport",
-        "inputType": "text"
+        "inputType": "date"
       },
       {
-        "label": 19,
+        "label": "Passport Expiry Date",
         "type": "Passport Expiry Date",
         "comment": "Auto fill from Passport",
-        "inputType": "text"
+        "inputType": "date"
       },
       {
-        "label": 20,
+        "label": "Passport Issued Place",
         "type": "Passport issued Place",
         "comment": "Auto fill from Passport",
         "inputType": "text"
       },
       {
-        "label": 21,
+        "label": "Date of Birth",
         "type": "Date Of Birth",
         "comment": "Auto fill from Passport",
-        "inputType": "text"
+        "inputType": "date"
       },
       {
-        "label": 22,
+        "label": "Father/Guardian Name",
         "type": "Name of Father or Guardian",
         "comment": "Auto fill from Passport",
         "inputType": "text"
