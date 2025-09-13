@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 
 // Initialize the Gemini API - Note: Replace with your actual API key
 const API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBuVcxKmBvSx6RRvJ-JrQ9H8X6r0uJMWLw';
-const genAI = new GoogleGenerativeAI(API_KEY);
+const genAI = new GoogleGenAI({ apiKey: API_KEY });
 
 export interface ExtractedPassportData {
   fullName?: string;
@@ -28,9 +28,6 @@ export async function extractPassportData(imageFile: File): Promise<ExtractedPas
     // Convert file to base64
     const base64 = await fileToBase64(imageFile);
     
-    // Use Gemini Pro Vision model for image analysis
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    
     const prompt = `Extract all text and data from this passport/document image. 
     Return the extracted information in JSON format with the following fields if present:
     - fullName (complete name as shown)
@@ -53,18 +50,26 @@ export async function extractPassportData(imageFile: File): Promise<ExtractedPas
     Only include fields that are clearly visible in the document. 
     Return ONLY valid JSON without any markdown formatting or code blocks.`;
     
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType: imageFile.type,
-          data: base64.split(',')[1] // Remove data URL prefix
+    // Use the correct API structure
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.0-flash-exp',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: imageFile.type,
+                data: base64.split(',')[1] // Remove data URL prefix
+              }
+            }
+          ]
         }
-      }
-    ]);
+      ]
+    });
     
-    const response = await result.response;
-    const text = response.text();
+    const text = response.text;
     
     // Clean the response to ensure valid JSON
     let cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
