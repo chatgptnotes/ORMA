@@ -24,6 +24,10 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>({});
   const [extractedText, setExtractedText] = useState<string>('');
   const [lastPDFName, setLastPDFName] = useState<string>('');
+  
+  // Debug logging
+  console.log('FormBuilder received formData:', formData);
+  console.log('Fields available:', formData?.inputForm?.fields);
 
   useEffect(() => {
     setFormValues(initialValues);
@@ -445,7 +449,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       )}
       
       <form onSubmit={handleSubmit}>
-        {formData.inputForm?.fields?.map((field, index) => (
+        {formData?.inputForm?.fields ? (
+          formData.inputForm.fields.map((field, index) => (
           <div key={index} className="form-field">
             <label className="form-label">
               {field.label}
@@ -462,7 +467,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <small className="field-comment">{field.comment}</small>
             )}
           </div>
-        ))}
+        ))
+        ) : (
+          <div className="error-message" style={{ padding: '2rem', textAlign: 'center' }}>
+            <h3>⚠️ No form fields available</h3>
+            <p>Please check that the form data is loaded correctly.</p>
+          </div>
+        )}
         
         <div className="form-actions">
           <button type="submit" className="btn btn-primary">
