@@ -54,30 +54,42 @@
         "label": "Upload Passport First  page  ",
         "type": "( upload pdf or image) ",
         "comment": "",
-        "inputType": "text"
+        "inputType": "file"
       },
       {
         "label": "Upload passport page address page  ( (pdf or image) )",
         "type": "( upload pdf or image) ",
         "comment": "",
-        "inputType": "text"
+        "inputType": "file"
       },
       {
-        "label": "Upload  Emirates ID / VISA copy",
+        "label": "Upload Emirates ID Front",
         "type": "( upload pdf or image) ",
         "comment": "",
-        "inputType": "text"
+        "inputType": "file"
       },
       {
-        "label": "Upload Aadhar Copy (pdf /image)",
+        "label": "Upload Emirates ID Back",
+        "type": "( upload pdf or image) ",
+        "comment": "",
+        "inputType": "file"
+      },
+      {
+        "label": "Upload Aadhaar Card Front",
         "type": "( upload pdf or image)  -optional",
         "comment": "",
-        "inputType": "text"
+        "inputType": "file"
       },
       {
-        "label": 1,
-        "type": "APPLICANT NAME ",
+        "label": "Upload Aadhaar Card Back",
+        "type": "( upload pdf or image)  -optional",
         "comment": "",
+        "inputType": "file"
+      },
+      {
+        "label": "Applicant Full Name in CAPITAL",
+        "type": "APPLICANT NAME ",
+        "comment": "Verify and confirm if already filled",
         "inputType": "text"
       },
       {
@@ -238,8 +250,8 @@
       },
       {
         "label": "",
-        "type": "Occupasion ",
-        "comment": "Auto fill Visa copy or Occupassion from Emirates ID",
+        "type": "Occupation ",
+        "comment": "Auto fill Visa copy or Occupation from Emirates ID",
         "inputType": "text"
       },
       {
@@ -277,6 +289,54 @@
         "type": "Name of Father or Guardian",
         "comment": "Auto fill from Passport",
         "inputType": "text"
+      },
+      {
+        "label": "Nominee name",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Relationship",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "DOB",
+        "type": "date",
+        "comment": "",
+        "inputType": "date"
+      },
+      {
+        "label": "Age autocalculate",
+        "type": "number",
+        "comment": "Auto calculated from DOB",
+        "inputType": "number"
+      },
+      {
+        "label": "Current Occupation",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Current Residence",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Mobile number (IND)",
+        "type": "tel",
+        "comment": "",
+        "inputType": "tel"
+      },
+      {
+        "label": "Percentage",
+        "type": "number",
+        "comment": "",
+        "inputType": "number"
       }
     ]
   },
@@ -447,6 +507,51 @@
       {
         "number": 22,
         "label": "Name of Father or Guardian",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Nominee Details",
+        "subLabel": ""
+      },
+      {
+        "number": 1,
+        "label": "Nominee name",
+        "subLabel": ""
+      },
+      {
+        "number": 2,
+        "label": "Relationship",
+        "subLabel": ""
+      },
+      {
+        "number": 3,
+        "label": "DOB",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Age autocalculate",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Current Occupation",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Current Residence",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Mobile number (IND)",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Percentage",
         "subLabel": ""
       },
       {

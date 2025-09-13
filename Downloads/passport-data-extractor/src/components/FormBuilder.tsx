@@ -24,6 +24,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>({});
   const [extractedText, setExtractedText] = useState<string>('');
   const [lastPDFName, setLastPDFName] = useState<string>('');
+  const [fields, setFields] = useState<FormField[]>(formData?.inputForm?.fields || []);
   
   // Debug logging
   console.log('FormBuilder received formData:', formData);
@@ -32,6 +33,26 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   useEffect(() => {
     setFormValues(initialValues);
   }, [initialValues]);
+
+  useEffect(() => {
+    setFields(formData?.inputForm?.fields || []);
+  }, [formData]);
+
+  const moveFieldUp = (index: number) => {
+    if (index > 0) {
+      const newFields = [...fields];
+      [newFields[index - 1], newFields[index]] = [newFields[index], newFields[index - 1]];
+      setFields(newFields);
+    }
+  };
+
+  const moveFieldDown = (index: number) => {
+    if (index < fields.length - 1) {
+      const newFields = [...fields];
+      [newFields[index], newFields[index + 1]] = [newFields[index + 1], newFields[index]];
+      setFields(newFields);
+    }
+  };
 
   const handleChange = (fieldLabel: string, value: any) => {
     setFormValues(prev => ({
@@ -167,24 +188,27 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       
       case 'select':
         return (
-          <select
-            className="form-select"
-            value={value}
-            onChange={(e) => handleChange(field.label, e.target.value)}
-          >
-            <option value="">Select an option</option>
-            {field.options?.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
+          <>
+            <select
+              className="form-select"
+              value={value}
+              onChange={(e) => handleChange(field.label, e.target.value)}
+            >
+              <option value="">Select an option</option>
+              {field.options?.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
             {field.options?.includes('OTHERs') && value === 'OTHERs' && (
               <input
                 type="text"
                 placeholder="Please specify"
                 className="form-input other-input"
+                style={{ marginTop: '0.5rem' }}
                 onChange={(e) => handleChange(`${field.label}_other`, e.target.value)}
               />
             )}
-          </select>
+          </>
         );
       
       case 'date':
@@ -449,9 +473,51 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       )}
       
       <form onSubmit={handleSubmit}>
-        {formData?.inputForm?.fields ? (
-          formData.inputForm.fields.map((field, index) => (
-          <div key={index} className="form-field">
+        {fields && fields.length > 0 ? (
+          fields.map((field, index) => (
+          <div key={index} className="form-field" style={{ position: 'relative' }}>
+            <div style={{ 
+              position: 'absolute', 
+              right: '0', 
+              top: '0',
+              display: 'flex',
+              gap: '0.25rem'
+            }}>
+              <button
+                type="button"
+                onClick={() => moveFieldUp(index)}
+                disabled={index === 0}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: index === 0 ? '#ccc' : '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: index === 0 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem'
+                }}
+                title="Move up"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() => moveFieldDown(index)}
+                disabled={index === fields.length - 1}
+                style={{
+                  padding: '0.25rem 0.5rem',
+                  background: index === fields.length - 1 ? '#ccc' : '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: index === fields.length - 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.875rem'
+                }}
+                title="Move down"
+              >
+                ↓
+              </button>
+            </div>
             <label className="form-label">
               {field.label}
               {!field.type.includes('optional') && <span className="required">*</span>}

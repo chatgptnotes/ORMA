@@ -11,15 +11,25 @@ const LandingPage: React.FC = () => {
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <Globe className="h-8 w-8 text-indigo-600 mr-2" />
-              <span className="text-2xl font-bold text-gray-900">PassportAI for ORMA</span>
+              <span className="text-xl font-bold text-gray-900">ORMA Kshemanidhi Portal</span>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Link to="/" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                Home
+              </Link>
               <Link to="/apply" className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium flex items-center">
                 <FileText className="h-4 w-4 mr-2" />
-                Open Application Form
+                Application Form
               </Link>
-              <Link to="/dashboard" className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-md text-sm font-medium">
+              <Link to="/dashboard" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                <Shield className="h-4 w-4 mr-2" />
                 Dashboard
+              </Link>
+              <Link to="/login" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                Login
+              </Link>
+              <Link to="/register" className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-md text-sm font-medium">
+                Register
               </Link>
             </div>
           </div>
