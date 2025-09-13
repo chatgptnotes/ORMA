@@ -1,0 +1,484 @@
+{
+  "inputForm": {
+    "title": "SUBMISSION FORM",
+    "fields": [
+      {
+        "label": "ORGANISATION",
+        "type": "ORMA/NON ORMA/ GRANMA/ TRACE/KERA/UMA/ OTHERs (list) if OTHERS provision to Enter ",
+        "comment": "",
+        "inputType": "select",
+        "options": [
+          "ORMA",
+          "NON ORMA",
+          "GRANMA",
+          "TRACE",
+          "KERA",
+          "UMA",
+          "OTHERs"
+        ]
+      },
+      {
+        "label": "Apply For ",
+        "type": "NORKA ID  or NORKA INSURANCE or KSHEMANIDHI   - Checkbox",
+        "comment": "",
+        "inputType": "checkbox",
+        "options": [
+          "NORKA ID",
+          "NORKA INSURANCE",
+          "KSHEMANIDHI"
+        ]
+      },
+      {
+        "label": "Type ",
+        "type": "NEW  or RENWAL - radio button",
+        "comment": "",
+        "inputType": "radio",
+        "options": [
+          "NEW",
+          "RENWAL"
+        ]
+      },
+      {
+        "label": "NORKA ID NUMER",
+        "type": "(optional)",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "KSHEMANIDHI ID NUMBER",
+        "type": "(optional)",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Upload Passport First  page  ",
+        "type": "( upload pdf or image) ",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Upload passport page address page  ( (pdf or image) )",
+        "type": "( upload pdf or image) ",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Upload  Emirates ID / VISA copy",
+        "type": "( upload pdf or image) ",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Upload Aadhar Copy (pdf /image)",
+        "type": "( upload pdf or image)  -optional",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": 1,
+        "type": "APPLICANT NAME ",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "First Name:(Given Name in the Passport)",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "Middle Name:",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "Last Name (Surname in the PP) :",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": 2,
+        "type": "UAE Mobile Number:",
+        "comment": "Input  digit mobile number  by customer (stating with 5xxxxxxxx. Country code will be there",
+        "inputType": "tel"
+      },
+      {
+        "label": 3,
+        "type": "WhatsApp Number:",
+        "comment": "Input with country code",
+        "inputType": "text"
+      },
+      {
+        "label": 4,
+        "type": "Permament Residence Address :",
+        "comment": "Autofill from Ppassport address page but editable",
+        "inputType": "text"
+      },
+      {
+        "label": 5,
+        "type": "PINcode",
+        "comment": "Autofill from Ppassport address page but editable",
+        "inputType": "text"
+      },
+      {
+        "label": 6,
+        "type": "email id",
+        "comment": "input",
+        "inputType": "text"
+      },
+      {
+        "label": 7,
+        "type": "Indian Active Mobile Number ",
+        "comment": "input",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "Local Body Type",
+        "comment": "Panchayath/Muncipality/Corporation (list)",
+        "inputType": "text"
+      },
+      {
+        "label": 8,
+        "type": "Taluk",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": 9,
+        "type": "Village",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": 10,
+        "type": "Name of Panchayath/Muncipality/Corporation",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": 11,
+        "type": "District ",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": 12,
+        "type": "Abroad Current Residence address ",
+        "comment": "input",
+        "inputType": "text"
+      },
+      {
+        "label": 13,
+        "type": "Aadhar number",
+        "comment": "Autofill if Aadhar copy uploaded",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "Nominee Details ",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": " Nominee name ",
+        "comment": "DOB",
+        "inputType": "date"
+      },
+      {
+        "label": "",
+        "type": "1",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "2",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "3",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": 12,
+        "type": "Form Collected by ",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": 13,
+        "type": "Uploaded Copies",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": 14,
+        "type": "VISA Number",
+        "comment": "Auto filled from EID or VISA copy ( UIDNO)",
+        "inputType": "text"
+      },
+      {
+        "label": 15,
+        "type": "SPONSOR / COMPANY NAME",
+        "comment": "Auto fill from Sponsor name in VISA copy or Employer Name from Emirates ID)",
+        "inputType": "text"
+      },
+      {
+        "label": 16,
+        "type": "VISA Expiry Date",
+        "comment": "Auto fill from  VISA copy or  from Emirates ID)",
+        "inputType": "text"
+      },
+      {
+        "label": "",
+        "type": "Occupasion ",
+        "comment": "Auto fill Visa copy or Occupassion from Emirates ID",
+        "inputType": "text"
+      },
+      {
+        "label": 17,
+        "type": "Passport Number",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": 18,
+        "type": "Passport Issue Date",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": 19,
+        "type": "Passport Expiry Date",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": 20,
+        "type": "Passport issued Place",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": 21,
+        "type": "Date Of Birth",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": 22,
+        "type": "Name of Father or Guardian",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      }
+    ]
+  },
+  "outputForm": {
+    "title": "OUTPUT FORM",
+    "description": "This form should be downloadable with the autofilled Data from the Input form after preview",
+    "fields": [
+      {
+        "number": 1,
+        "label": "APPLICANT NAME ",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "First Name:(Given Name in the Passport)",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Middle Name:",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Last Name (Surname in the PP) :",
+        "subLabel": ""
+      },
+      {
+        "number": 2,
+        "label": "UAE Mobile Number:",
+        "subLabel": "+971"
+      },
+      {
+        "number": 3,
+        "label": "WhatsApp Number:",
+        "subLabel": ""
+      },
+      {
+        "number": 4,
+        "label": "Permament Residence Address :",
+        "subLabel": ""
+      },
+      {
+        "number": 5,
+        "label": "PINcode",
+        "subLabel": ""
+      },
+      {
+        "number": 6,
+        "label": "email id",
+        "subLabel": ""
+      },
+      {
+        "number": 7,
+        "label": "Indian Active Mobile Number ",
+        "subLabel": 91
+      },
+      {
+        "number": "",
+        "label": "Local Body Type",
+        "subLabel": " "
+      },
+      {
+        "number": 8,
+        "label": "Taluk",
+        "subLabel": ""
+      },
+      {
+        "number": 9,
+        "label": "Village",
+        "subLabel": ""
+      },
+      {
+        "number": 10,
+        "label": "Name of Panchayath/Muncipality/Corporation",
+        "subLabel": ""
+      },
+      {
+        "number": 11,
+        "label": "District ",
+        "subLabel": ""
+      },
+      {
+        "number": 12,
+        "label": "Abroad Current Residence address ",
+        "subLabel": ""
+      },
+      {
+        "number": 13,
+        "label": "Aadhar number",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Nominee Details ",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": " Nominee name ",
+        "subLabel": "Relationship"
+      },
+      {
+        "number": "",
+        "label": "1",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "2",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "3",
+        "subLabel": ""
+      },
+      {
+        "number": 12,
+        "label": "Form Collected by ",
+        "subLabel": ""
+      },
+      {
+        "number": 13,
+        "label": "Uploaded Copies",
+        "subLabel": ""
+      },
+      {
+        "number": 14,
+        "label": "VISA Number",
+        "subLabel": ""
+      },
+      {
+        "number": 15,
+        "label": "SPONSOR / COMPANY NAME",
+        "subLabel": ""
+      },
+      {
+        "number": 16,
+        "label": "VISA Expiry Date",
+        "subLabel": ""
+      },
+      {
+        "number": 17,
+        "label": "Passport Number",
+        "subLabel": ""
+      },
+      {
+        "number": 18,
+        "label": "Passport Issue Date",
+        "subLabel": ""
+      },
+      {
+        "number": 19,
+        "label": "Passport Expiry Date",
+        "subLabel": ""
+      },
+      {
+        "number": 20,
+        "label": "Passport issued Place",
+        "subLabel": ""
+      },
+      {
+        "number": 21,
+        "label": "Date Of Birth",
+        "subLabel": ""
+      },
+      {
+        "number": 22,
+        "label": "Name of Father or Guardian",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Documents uploaded",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Passport Front  Page",
+        "subLabel": "√"
+      },
+      {
+        "number": "",
+        "label": "Passport Back/Address   Page",
+        "subLabel": "√"
+      },
+      {
+        "number": "",
+        "label": "Active  Emirates ID  or VISA Copy",
+        "subLabel": "√"
+      },
+      {
+        "number": "",
+        "label": "Aadhar copy",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Header & Footer same as in sample form",
+        "subLabel": ""
+      }
+    ]
+  }
+}
