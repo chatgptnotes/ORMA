@@ -7,8 +7,10 @@ import './FormBuilder.css';
 
 interface FormBuilderProps {
   formData: {
-    title: string;
-    fields: FormField[];
+    inputForm?: {
+      title?: string;
+      fields: FormField[];
+    };
   };
   onSubmit: (values: Record<string, any>) => void;
   initialValues?: Record<string, any>;
@@ -395,6 +397,46 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         )}
       </div>
       
+      {/* Display extracted passport data */}
+      {Object.keys(formValues).filter(key => formValues[key] && formValues[key] !== '').length > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          margin: '2rem 0',
+          color: 'white'
+        }}>
+          <h3 style={{ fontSize: '1.3rem', marginBottom: '1rem', color: 'white' }}>
+            📋 Extracted Passport Data
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '1rem',
+            background: 'rgba(255, 255, 255, 0.1)',
+            padding: '1rem',
+            borderRadius: '8px'
+          }}>
+            {Object.entries(formValues)
+              .filter(([key, value]) => value && value !== '')
+              .map(([key, value]) => (
+                <div key={key} style={{
+                  padding: '0.5rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '4px'
+                }}>
+                  <span style={{ fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.9)' }}>
+                    {key}:
+                  </span>{' '}
+                  <span style={{ color: 'white' }}>
+                    {Array.isArray(value) ? value.join(', ') : String(value)}
+                  </span>
+                </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       <hr className="divider" />
       
       {/* Display extracted text from PDF */}
@@ -403,7 +445,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       )}
       
       <form onSubmit={handleSubmit}>
-        {formData.fields.map((field, index) => (
+        {formData.inputForm?.fields?.map((field, index) => (
           <div key={index} className="form-field">
             <label className="form-label">
               {field.label}
