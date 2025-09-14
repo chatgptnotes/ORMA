@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit2, Trash2, FileText, Save, X } from 'lucide-react';
 import { getPassportRecord, updatePassportData, deletePassportRecord } from '../services/supabaseService';
+import { useAuth } from '../contexts/AuthContext';
 import FormBuilder from '../components/FormBuilder';
 import formData from '../data/processedFormData.json';
 import '../components/FormBuilder.css';
@@ -9,6 +10,8 @@ import '../components/FormBuilder.css';
 const ApplicationDetailWithForm: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const [application, setApplication] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -215,6 +218,7 @@ const ApplicationDetailWithForm: React.FC = () => {
             initialData={application.form_data || {}}
             preloadedDocuments={extractedDocuments}
             isReadOnly={!isEditing}
+            isAdmin={isAdmin}
           />
         </div>
       </div>

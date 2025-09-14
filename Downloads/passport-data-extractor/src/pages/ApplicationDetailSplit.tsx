@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit2, Trash2, Save, X } from 'lucide-react';
 import { getPassportRecord, updatePassportData, deletePassportRecord } from '../services/supabaseService';
+import { useAuth } from '../contexts/AuthContext';
 import formData from '../data/processedFormData.json';
 import '../components/FormBuilder.css';
 import './ApplicationDetailSplit.css';
@@ -9,6 +10,9 @@ import './ApplicationDetailSplit.css';
 const ApplicationDetailSplit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+
   const [application, setApplication] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -187,7 +191,8 @@ const ApplicationDetailSplit: React.FC = () => {
       }
     }, [showFieldSelector, fieldName]);
 
-    if (!value) return null;
+    // Only show copy/paste buttons for admin users
+    if (!value || !isAdmin) return null;
 
     return (
       <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block' }}>

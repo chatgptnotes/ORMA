@@ -886,7 +886,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     })).filter(f => f.type !== 'file' && f.type !== 'checkbox');
   };
 
-  // Component for copy/paste button with field selector
+  // Component for copy/paste button with field selector (admin only)
   const CopyPasteButton = ({ value, fieldName, label }: { value: string; fieldName: string; label: string }) => {
     const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -908,7 +908,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       }
     }, [showFieldSelector, fieldName]);
 
-    if (!value) return null;
+    // Only show copy/paste buttons for admin users
+    if (!value || !isAdmin) return null;
 
     return (
       <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block', marginLeft: '0.5rem' }}>
