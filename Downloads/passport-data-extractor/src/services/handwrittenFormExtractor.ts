@@ -7,6 +7,7 @@ const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 export interface HandwrittenFormData {
   // Personal Information
   fullName?: string;
+  applicantName?: string;
   dateOfBirth?: string;
   age?: string;
   gender?: string;
@@ -15,13 +16,23 @@ export interface HandwrittenFormData {
   mobileNumber?: string;
   email?: string;
   alternatePhone?: string;
+  uaePhoneNumber?: string;
+  whatsappNumber?: string;
+  mobileNumberNativePlace?: string;
 
   // Address Information
   currentAddress?: string;
   permanentAddress?: string;
+  permanentAddressKerala?: string;
+  abroadAddress?: string;
   district?: string;
   state?: string;
   pinCode?: string;
+  taluk?: string;
+  village?: string;
+  panchayath?: string;
+  municipality?: string;
+  corporation?: string;
 
   // Educational Information
   education?: string;
@@ -32,11 +43,24 @@ export interface HandwrittenFormData {
   panNumber?: string;
   voterIdNumber?: string;
 
+  // Banking Information
+  nroAccountNumber?: string;
+  ifscCode?: string;
+  branchName?: string;
+  branch?: string;
+
   // Family Information
   fatherName?: string;
   motherName?: string;
   spouseName?: string;
   maritalStatus?: string;
+
+  // Nominee Information
+  nomineeName?: string;
+  relationshipWithNominee?: string;
+  nomineeCurrentPlace?: string;
+  isNomineeWorking?: string;
+  nomineeMobileNumber?: string;
 
   // Emergency Contact
   emergencyContactName?: string;
@@ -49,11 +73,13 @@ export interface HandwrittenFormData {
   religion?: string;
   bloodGroup?: string;
   occupation?: string;
+  personCollectingForm?: string;
 
   // Form Metadata
   formType?: string;
   submissionDate?: string;
   applicationNumber?: string;
+  signature?: string;
 
   // Raw extracted text for reference
   rawExtractedText?: string;
@@ -64,58 +90,65 @@ export async function extractHandwrittenFormData(imageFile: File): Promise<Handw
     // Convert file to base64
     const base64Data = await fileToBase64(imageFile);
 
-    const prompt = `You are an expert at extracting information from handwritten forms, especially forms in Malayalam and English.
+    const prompt = `You are an expert at extracting information from ORMA Kshemanidhi application forms, especially handwritten forms in Malayalam and English.
 
-    Please extract ALL the following information from this handwritten form image:
+    Please extract ALL the following information from this ORMA form image:
 
     1. Personal Information:
-       - Full Name (in English)
+       - Applicant's Name / Full Name (in English)
        - Date of Birth
        - Age
        - Gender
 
     2. Contact Information:
-       - Mobile Number
+       - UAE Phone Number
+       - WhatsApp Number
        - Email Address
+       - Mobile Number in Native Place
        - Alternate Phone Number
 
-    3. Address Information:
-       - Current Address
-       - Permanent Address
+    3. Kerala Address Information:
+       - Permanent Address in Kerala
+       - Pincode
+       - Taluk
+       - Village
+       - Panchayath / Municipality / Corporation
        - District
-       - State
-       - PIN Code
 
-    4. Educational Information:
-       - Education Level/Qualification
-       - School/Institution Name
+    4. Abroad Address:
+       - Current/Abroad Address (Dubai/UAE address)
 
-    5. Identity Documents:
+    5. Banking Information:
+       - NRO Account Number
+       - IFSC Code
+       - Branch Name
+       - Branch
+
+    6. Identity Documents:
        - Aadhar Number
-       - PAN Number
-       - Voter ID Number
+       - PAN Number (if present)
+       - Voter ID Number (if present)
 
-    6. Family Information:
+    7. Nominee Information:
+       - Nominee Name
+       - Relationship with Nominee
+       - Current place of Nominee
+       - Is Nominee working? (Yes/No)
+       - Nominee Mobile Number (IND)
+
+    8. Family Information:
        - Father's Name
        - Mother's Name
-       - Spouse's Name (if applicable)
+       - Spouse's Name
        - Marital Status
 
-    7. Emergency Contact:
-       - Emergency Contact Name
-       - Relationship with Emergency Contact
-       - Emergency Contact Number
-       - Emergency Contact Address
+    9. Additional Information:
+       - Name of Person collecting this Form
+       - Signature
+       - Date of submission
 
-    8. Additional Information:
-       - Nationality
-       - Religion
-       - Blood Group
-       - Occupation
-
-    9. Form Details:
-       - Form Type/Purpose
-       - Submission Date
+    10. Form Details:
+       - Form Type (ORMA Kshemanidhi Application)
        - Application Number (if any)
 
     IMPORTANT INSTRUCTIONS:
@@ -128,37 +161,45 @@ export async function extractHandwrittenFormData(imageFile: File): Promise<Handw
 
     Return the data in the following JSON format:
     {
-      "fullName": "extracted name",
+      "applicantName": "applicant's name",
+      "fullName": "full name",
       "dateOfBirth": "DD/MM/YYYY",
       "age": "extracted age",
       "gender": "Male/Female/Other",
-      "mobileNumber": "phone number",
+      "uaePhoneNumber": "UAE phone number",
+      "whatsappNumber": "WhatsApp number",
       "email": "email address",
+      "mobileNumberNativePlace": "mobile number in native place",
       "alternatePhone": "alternate number",
-      "currentAddress": "current address",
+      "permanentAddressKerala": "permanent address in Kerala",
       "permanentAddress": "permanent address",
+      "pinCode": "pincode",
+      "taluk": "taluk name",
+      "village": "village name",
+      "panchayath": "panchayath/municipality/corporation name",
       "district": "district name",
-      "state": "state name",
-      "pinCode": "pin code",
-      "education": "education level",
-      "schoolName": "school/institution name",
+      "abroadAddress": "abroad/Dubai address",
+      "currentAddress": "current address",
+      "nroAccountNumber": "NRO account number",
+      "ifscCode": "IFSC code",
+      "branchName": "branch name",
+      "branch": "branch",
       "aadharNumber": "aadhar number",
       "panNumber": "PAN number",
       "voterIdNumber": "voter ID",
+      "nomineeName": "nominee name",
+      "relationshipWithNominee": "relationship with nominee",
+      "nomineeCurrentPlace": "current place of nominee",
+      "isNomineeWorking": "Yes/No",
+      "nomineeMobileNumber": "nominee mobile number",
       "fatherName": "father's name",
       "motherName": "mother's name",
       "spouseName": "spouse's name",
       "maritalStatus": "marital status",
-      "emergencyContactName": "emergency contact name",
-      "emergencyContactRelation": "relationship",
-      "emergencyContactNumber": "emergency phone",
-      "emergencyContactAddress": "emergency address",
-      "nationality": "nationality",
-      "religion": "religion",
-      "bloodGroup": "blood group",
-      "occupation": "occupation",
-      "formType": "type of form",
+      "personCollectingForm": "name of person collecting form",
+      "signature": "signature",
       "submissionDate": "submission date",
+      "formType": "ORMA Kshemanidhi Application",
       "applicationNumber": "application number",
       "rawExtractedText": "complete raw text from the form"
     }`;
@@ -213,14 +254,18 @@ export function mapHandwrittenToFormFields(handwrittenData: HandwrittenFormData)
   const mappedData: Record<string, any> = {};
 
   // Map personal information
-  if (handwrittenData.fullName) {
-    mappedData['Full_Name'] = handwrittenData.fullName;
-    mappedData['Applicant_Full_Name'] = handwrittenData.fullName;
+  const name = handwrittenData.applicantName || handwrittenData.fullName;
+  if (name) {
+    mappedData['Applicant_Full_Name_in_CAPITAL'] = name.toUpperCase();
+    mappedData['Full_Name'] = name;
+    mappedData['Applicant_Full_Name'] = name;
 
     // Try to split into given name and surname
-    const nameParts = handwrittenData.fullName.split(' ');
+    const nameParts = name.split(' ');
     if (nameParts.length > 1) {
+      mappedData['First_Name'] = nameParts[0];
       mappedData['Given_Name'] = nameParts.slice(0, -1).join(' ');
+      mappedData['Last_Name'] = nameParts[nameParts.length - 1];
       mappedData['Surname'] = nameParts[nameParts.length - 1];
     }
   }
@@ -234,9 +279,18 @@ export function mapHandwrittenToFormFields(handwrittenData: HandwrittenFormData)
   }
 
   // Map contact information
-  if (handwrittenData.mobileNumber) {
-    mappedData['Mobile_Number'] = handwrittenData.mobileNumber;
-    mappedData['Contact_Number'] = handwrittenData.mobileNumber;
+  if (handwrittenData.uaePhoneNumber) {
+    mappedData['UAE_Phone_Number'] = handwrittenData.uaePhoneNumber;
+    mappedData['Mobile_Number'] = handwrittenData.uaePhoneNumber;
+  }
+
+  if (handwrittenData.whatsappNumber) {
+    mappedData['WhatsApp_Number'] = handwrittenData.whatsappNumber;
+  }
+
+  if (handwrittenData.mobileNumberNativePlace) {
+    mappedData['Mobile_Number_in_Native_Place'] = handwrittenData.mobileNumberNativePlace;
+    mappedData['Contact_Number'] = handwrittenData.mobileNumberNativePlace;
   }
 
   if (handwrittenData.email) {
@@ -244,26 +298,79 @@ export function mapHandwrittenToFormFields(handwrittenData: HandwrittenFormData)
     mappedData['Email_Address'] = handwrittenData.email;
   }
 
-  // Map address information
-  if (handwrittenData.currentAddress) {
-    mappedData['Address'] = handwrittenData.currentAddress;
-    mappedData['Current_Address'] = handwrittenData.currentAddress;
+  // Map Kerala address information
+  if (handwrittenData.permanentAddressKerala || handwrittenData.permanentAddress) {
+    const address = handwrittenData.permanentAddressKerala || handwrittenData.permanentAddress;
+    mappedData['Permanent_Residence_Address'] = address;
+    mappedData['Address_in_Kerala'] = address;
+    mappedData['Address'] = address;
   }
 
   if (handwrittenData.pinCode) {
     mappedData['PIN_Code'] = handwrittenData.pinCode;
+    mappedData['Pincode'] = handwrittenData.pinCode;
+  }
+
+  if (handwrittenData.taluk) {
+    mappedData['Taluk'] = handwrittenData.taluk;
+  }
+
+  if (handwrittenData.village) {
+    mappedData['Village'] = handwrittenData.village;
+  }
+
+  if (handwrittenData.panchayath) {
+    mappedData['Panchayath_Municipality_Corporation'] = handwrittenData.panchayath;
   }
 
   if (handwrittenData.district) {
     mappedData['District'] = handwrittenData.district;
   }
 
-  if (handwrittenData.state) {
-    mappedData['State'] = handwrittenData.state;
+  // Map abroad address
+  if (handwrittenData.abroadAddress || handwrittenData.currentAddress) {
+    const abroadAddr = handwrittenData.abroadAddress || handwrittenData.currentAddress;
+    mappedData['Current_Residence_Address'] = abroadAddr;
+    mappedData['Abroad_Address'] = abroadAddr;
+  }
+
+  // Map banking information
+  if (handwrittenData.nroAccountNumber) {
+    mappedData['NRO_Account_Number'] = handwrittenData.nroAccountNumber;
+  }
+
+  if (handwrittenData.ifscCode) {
+    mappedData['IFSC_Code'] = handwrittenData.ifscCode;
+  }
+
+  if (handwrittenData.branchName) {
+    mappedData['Branch_Name'] = handwrittenData.branchName;
+  }
+
+  // Map nominee information
+  if (handwrittenData.nomineeName) {
+    mappedData['Nominee_Name'] = handwrittenData.nomineeName;
+  }
+
+  if (handwrittenData.relationshipWithNominee) {
+    mappedData['Relationship_with_Nominee'] = handwrittenData.relationshipWithNominee;
+  }
+
+  if (handwrittenData.nomineeCurrentPlace) {
+    mappedData['Nominee_Current_Place'] = handwrittenData.nomineeCurrentPlace;
+  }
+
+  if (handwrittenData.isNomineeWorking) {
+    mappedData['Is_Nominee_Working'] = handwrittenData.isNomineeWorking;
+  }
+
+  if (handwrittenData.nomineeMobileNumber) {
+    mappedData['Nominee_Mobile_Number'] = handwrittenData.nomineeMobileNumber;
   }
 
   // Map family information
   if (handwrittenData.fatherName) {
+    mappedData['Father/Guardian_Name'] = handwrittenData.fatherName;
     mappedData['Father_Name'] = handwrittenData.fatherName;
   }
 
@@ -284,26 +391,18 @@ export function mapHandwrittenToFormFields(handwrittenData: HandwrittenFormData)
     mappedData['PAN_Number'] = handwrittenData.panNumber;
   }
 
-  if (handwrittenData.voterIdNumber) {
-    mappedData['Voter_ID'] = handwrittenData.voterIdNumber;
-  }
-
   // Map additional information
-  if (handwrittenData.nationality) {
-    mappedData['Nationality'] = handwrittenData.nationality;
+  if (handwrittenData.personCollectingForm) {
+    mappedData['Name_of_Person_collecting_this_Form'] = handwrittenData.personCollectingForm;
   }
 
-  if (handwrittenData.occupation) {
-    mappedData['Occupation'] = handwrittenData.occupation;
-  }
-
-  if (handwrittenData.education) {
-    mappedData['Education'] = handwrittenData.education;
+  if (handwrittenData.submissionDate) {
+    mappedData['Date'] = handwrittenData.submissionDate;
   }
 
   // Add metadata
   mappedData['Document_Type'] = 'Handwritten Form';
-  mappedData['Form_Type'] = handwrittenData.formType || 'General Application';
+  mappedData['Form_Type'] = handwrittenData.formType || 'ORMA Kshemanidhi Application';
 
   return mappedData;
 }
