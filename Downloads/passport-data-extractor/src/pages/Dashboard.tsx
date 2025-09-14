@@ -1,28 +1,62 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/DevAuthContext';
-import { FileText, Users, TrendingUp, Settings, LogOut, Plus, Clock, CheckCircle } from 'lucide-react';
+import { FileText, Users, TrendingUp, Settings, LogOut, Plus, Clock, CheckCircle, Eye } from 'lucide-react';
+import { getAllPassportRecords } from '../services/supabaseService';
 
 const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  const fetchApplications = async () => {
+    try {
+      const result = await getAllPassportRecords();
+      if (result.success && result.data) {
+        setApplications(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
   };
 
+  // Calculate real statistics from fetched data
   const stats = [
-    { name: 'Total Applications', value: '24', icon: FileText, color: 'bg-blue-500' },
-    { name: 'Pending Review', value: '8', icon: Clock, color: 'bg-yellow-500' },
-    { name: 'Approved', value: '16', icon: CheckCircle, color: 'bg-green-500' },
-    { name: 'Processing Time', value: '2.3 hrs', icon: TrendingUp, color: 'bg-purple-500' },
+    { name: 'Total Applications', value: applications.length.toString(), icon: FileText, color: 'bg-blue-500' },
+    { name: 'This Week', value: applications.filter(app => {
+      const date = new Date(app.created_at);
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return date > weekAgo;
+    }).length.toString(), icon: Clock, color: 'bg-yellow-500' },
+    { name: 'Processed', value: applications.filter(app => app.full_name).length.toString(), icon: CheckCircle, color: 'bg-green-500' },
+    { name: 'Avg. Fields', value: applications.length > 0 ? Math.round(
+      applications.reduce((acc, app) => {
+        const fields = Object.keys(app).filter(key => app[key] && !['id', 'created_at', 'updated_at'].includes(key));
+        return acc + fields.length;
+      }, 0) / applications.length
+    ).toString() : '0', icon: TrendingUp, color: 'bg-purple-500' },
   ];
 
-  const recentApplications = [
-    { id: 1, name: 'John Doe', passportNo: 'K2345678', status: 'approved', date: '2024-01-10' },
-    { id: 2, name: 'Jane Smith', passportNo: 'L3456789', status: 'pending', date: '2024-01-09' },
-    { id: 3, name: 'Robert Johnson', passportNo: 'M4567890', status: 'approved', date: '2024-01-08' },
-    { id: 4, name: 'Maria Garcia', passportNo: 'N5678901', status: 'pending', date: '2024-01-07' },
-  ];
+  // Get recent applications (last 5)
+  const recentApplications = applications.slice(0, 5).map(app => ({
+    id: app.id,
+    name: app.full_name || app.given_name || 'Unknown',
+    passportNo: app.passport_number || 'N/A',
+    status: app.passport_number ? 'processed' : 'pending',
+    date: new Date(app.created_at).toLocaleDateString()
+  }));
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -69,11 +103,17 @@ const Dashboard: React.FC = () => {
                 <Plus className="h-5 w-5 mr-2" />
                 New Application
               </Link>
-              <button className="flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <button
+                onClick={() => navigate('/applications')}
+                className="flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
                 <FileText className="h-5 w-5 mr-2" />
                 View All Applications
               </button>
-              <button className="flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              <button
+                onClick={() => navigate('/settings')}
+                className="flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
                 <Settings className="h-5 w-5 mr-2" />
                 Settings
               </button>
@@ -108,33 +148,60 @@ const Dashboard: React.FC = () => {
         {/* Recent Applications */}
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
+            <div className="px-4 py-5 border-b border-gray-200 sm:px-6 flex justify-between items-center">
               <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Applications</h3>
+              <button
+                onClick={() => fetchApplications()}
+                className="text-sm text-indigo-600 hover:text-indigo-900"
+              >
+                Refresh
+              </button>
             </div>
-            <ul className="divide-y divide-gray-200">
-              {recentApplications.map((application) => (
-                <li key={application.id}>
-                  <div className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <p className="text-sm font-medium text-indigo-600 truncate">{application.name}</p>
-                        <p className="ml-4 text-sm text-gray-500">Passport: {application.passportNo}</p>
-                      </div>
-                      <div className="ml-2 flex-shrink-0 flex">
-                        <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          application.status === 'approved' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {application.status}
-                        </p>
-                        <p className="ml-4 text-sm text-gray-500">{application.date}</p>
+            {loading ? (
+              <div className="px-4 py-8 text-center text-gray-500">
+                Loading applications...
+              </div>
+            ) : recentApplications.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-gray-500 mb-4">No applications yet</p>
+                <Link
+                  to="/apply"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Application
+                </Link>
+              </div>
+            ) : (
+              <ul className="divide-y divide-gray-200">
+                {recentApplications.map((application) => (
+                  <li key={application.id} className="hover:bg-gray-50 cursor-pointer transition-colors">
+                    <div
+                      className="px-4 py-4 sm:px-6"
+                      onClick={() => navigate(`/application/${application.id}`)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <p className="text-sm font-medium text-indigo-600 truncate">{application.name}</p>
+                          <p className="ml-4 text-sm text-gray-500">Passport: {application.passportNo}</p>
+                        </div>
+                        <div className="ml-2 flex-shrink-0 flex items-center">
+                          <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            application.status === 'processed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {application.status}
+                          </p>
+                          <p className="ml-4 text-sm text-gray-500">{application.date}</p>
+                          <Eye className="ml-2 h-4 w-4 text-gray-400" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>

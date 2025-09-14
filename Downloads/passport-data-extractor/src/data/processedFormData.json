@@ -18,10 +18,10 @@
         ]
       },
       {
-        "label": "Apply For ",
-        "type": "NORKA ID  or NORKA INSURANCE or KSHEMANIDHI   - Checkbox",
+        "label": "Apply For",
+        "type": "NORKA ID or NORKA INSURANCE or KSHEMANIDHI - Dropdown",
         "comment": "",
-        "inputType": "checkbox",
+        "inputType": "select",
         "options": [
           "NORKA ID",
           "NORKA INSURANCE",
@@ -29,13 +29,13 @@
         ]
       },
       {
-        "label": "Type ",
-        "type": "NEW  or RENWAL - radio button",
+        "label": "Type",
+        "type": "NEW or RENEWAL - dropdown",
         "comment": "",
-        "inputType": "radio",
+        "inputType": "select",
         "options": [
           "NEW",
-          "RENWAL"
+          "RENEWAL"
         ]
       },
       {

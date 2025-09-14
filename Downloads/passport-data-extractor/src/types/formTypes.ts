@@ -2,7 +2,7 @@ export interface FormField {
   label: string;
   type: string;
   comment: string;
-  inputType: 'text' | 'radio' | 'checkbox' | 'select' | 'date' | 'tel' | 'email' | 'file';
+  inputType: 'text' | 'radio' | 'checkbox' | 'select' | 'date' | 'tel' | 'email' | 'file' | 'number';
   options?: string[];
 }
 

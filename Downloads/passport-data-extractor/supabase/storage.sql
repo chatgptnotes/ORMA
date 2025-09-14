@@ -1,36 +1,41 @@
--- Create the documents storage bucket
-INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);
+-- Create storage bucket for passport documents
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'passport-documents',
+  'passport-documents',
+  false,
+  10485760, -- 10MB limit
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+)
+ON CONFLICT (id) DO NOTHING;
 
--- Create policies for the documents bucket
-CREATE POLICY "Users can upload their own documents" ON storage.objects 
-FOR INSERT WITH CHECK (
-    bucket_id = 'documents' 
-    AND auth.uid()::text = (storage.foldername(name))[1]
+-- Create policy for authenticated users to upload files
+CREATE POLICY "Allow authenticated users to upload passport documents"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'passport-documents'
+  AND auth.role() = 'authenticated'
 );
 
-CREATE POLICY "Users can view their own documents" ON storage.objects 
-FOR SELECT USING (
-    bucket_id = 'documents' 
-    AND auth.uid()::text = (storage.foldername(name))[1]
+-- Create policy for authenticated users to view their own files
+CREATE POLICY "Allow authenticated users to view passport documents"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'passport-documents'
+  AND auth.role() = 'authenticated'
 );
 
-CREATE POLICY "Admins can view documents in their organization" ON storage.objects 
-FOR SELECT USING (
-    bucket_id = 'documents' 
-    AND EXISTS (
-        SELECT 1 FROM user_profiles admin_profile
-        JOIN user_profiles user_profile ON user_profile.id = (storage.foldername(name))[1]::uuid
-        WHERE admin_profile.id = auth.uid() 
-        AND admin_profile.role IN ('admin', 'superadmin')
-        AND (
-            admin_profile.role = 'superadmin' 
-            OR admin_profile.organization_id = user_profile.organization_id
-        )
-    )
+-- Create policy for authenticated users to delete their own files
+CREATE POLICY "Allow authenticated users to delete passport documents"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'passport-documents'
+  AND auth.role() = 'authenticated'
 );
 
-CREATE POLICY "Users can delete their own documents" ON storage.objects 
-FOR DELETE USING (
-    bucket_id = 'documents' 
-    AND auth.uid()::text = (storage.foldername(name))[1]
-);
+-- Add document_url column to passport_records table if not exists
+ALTER TABLE passport_records
+ADD COLUMN IF NOT EXISTS document_url TEXT;
+
+-- Add index for document URL
+CREATE INDEX IF NOT EXISTS idx_document_url ON passport_records(document_url);
