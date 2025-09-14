@@ -51,42 +51,6 @@
         "inputType": "text"
       },
       {
-        "label": "Upload Passport First  page  ",
-        "type": "( upload pdf or image) ",
-        "comment": "",
-        "inputType": "file"
-      },
-      {
-        "label": "Upload passport page address page  ( (pdf or image) )",
-        "type": "( upload pdf or image) ",
-        "comment": "",
-        "inputType": "file"
-      },
-      {
-        "label": "Upload Emirates ID Front",
-        "type": "( upload pdf or image) ",
-        "comment": "",
-        "inputType": "file"
-      },
-      {
-        "label": "Upload Emirates ID Back",
-        "type": "( upload pdf or image) ",
-        "comment": "",
-        "inputType": "file"
-      },
-      {
-        "label": "Upload Aadhaar Card Front",
-        "type": "( upload pdf or image)  -optional",
-        "comment": "",
-        "inputType": "file"
-      },
-      {
-        "label": "Upload Aadhaar Card Back",
-        "type": "( upload pdf or image)  -optional",
-        "comment": "",
-        "inputType": "file"
-      },
-      {
         "label": "Applicant Full Name in CAPITAL",
         "type": "APPLICANT NAME ",
         "comment": "Verify and confirm if already filled",

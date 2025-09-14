@@ -1558,61 +1558,121 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           {/* Visa/Stamp Page Upload */}
           <div className="upload-card">
             <h4>📙 Emirates ID or VISA</h4>
-            <input
-              type="file"
-              id="passport-visa"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handlePassportUpload(file, 'visa');
-                }
-              }}
-              disabled={isExtracting.visa}
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="passport-visa" className={`upload-btn ${isExtracting.visa ? 'disabled' : ''} ${uploadedFiles.visa ? 'uploaded' : ''}`}>
-              {isExtracting.visa ? (
-                <>
-                  <span className="spinner"></span>
-                  Extracting...
-                </>
-              ) : uploadedFiles.visa ? (
-                <>✅ {uploadedFiles.visa.name}</>
-              ) : (
-                <>📷 Upload Visa</>
-              )}
-            </label>
+            <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+              {/* Front Upload */}
+              <input
+                type="file"
+                id="visa-front"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'visa_front');
+                  }
+                }}
+                disabled={isExtracting.visa_front}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="visa-front" className={`upload-btn ${isExtracting.visa_front ? 'disabled' : ''} ${uploadedFiles.visa_front ? 'uploaded' : ''}`}>
+                {isExtracting.visa_front ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.visa_front ? (
+                  <>✅ Front</>
+                ) : (
+                  <>📷 Front</>
+                )}
+              </label>
+
+              {/* Back Upload */}
+              <input
+                type="file"
+                id="visa-back"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'visa_back');
+                  }
+                }}
+                disabled={isExtracting.visa_back}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="visa-back" className={`upload-btn ${isExtracting.visa_back ? 'disabled' : ''} ${uploadedFiles.visa_back ? 'uploaded' : ''}`}>
+                {isExtracting.visa_back ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.visa_back ? (
+                  <>✅ Back</>
+                ) : (
+                  <>📷 Back</>
+                )}
+              </label>
+            </div>
           </div>
 
           {/* Other Documents */}
           <div className="upload-card">
             <h4>📄 Aadhar copy (Optional)</h4>
-            <input
-              type="file"
-              id="passport-other"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handlePassportUpload(file, 'other');
-                }
-              }}
-              disabled={isExtracting.other}
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="passport-other" className={`upload-btn ${isExtracting.other ? 'disabled' : ''} ${uploadedFiles.other ? 'uploaded' : ''}`}>
-              {isExtracting.other ? (
-                <>
-                  <span className="spinner"></span>
-                  Extracting...
-                </>
-              ) : uploadedFiles.other ? (
-                <>✅ {uploadedFiles.other.name}</>
-              ) : (
-                <>📷 Upload Other</>
-              )}
-            </label>
+            <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+              {/* Front Upload */}
+              <input
+                type="file"
+                id="aadhar-front"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'aadhar_front');
+                  }
+                }}
+                disabled={isExtracting.aadhar_front}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="aadhar-front" className={`upload-btn ${isExtracting.aadhar_front ? 'disabled' : ''} ${uploadedFiles.aadhar_front ? 'uploaded' : ''}`}>
+                {isExtracting.aadhar_front ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.aadhar_front ? (
+                  <>✅ Front</>
+                ) : (
+                  <>📷 Front</>
+                )}
+              </label>
+
+              {/* Back Upload */}
+              <input
+                type="file"
+                id="aadhar-back"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'aadhar_back');
+                  }
+                }}
+                disabled={isExtracting.aadhar_back}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="aadhar-back" className={`upload-btn ${isExtracting.aadhar_back ? 'disabled' : ''} ${uploadedFiles.aadhar_back ? 'uploaded' : ''}`}>
+                {isExtracting.aadhar_back ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.aadhar_back ? (
+                  <>✅ Back</>
+                ) : (
+                  <>📷 Back</>
+                )}
+              </label>
+            </div>
           </div>
 
           {/* Handwritten Form - Document 4 */}
