@@ -73,13 +73,13 @@ CREATE TABLE IF NOT EXISTS passport_records (
 );
 
 -- Create indexes for search
-CREATE INDEX idx_passport_number ON passport_records(passport_number);
-CREATE INDEX idx_full_name ON passport_records(full_name);
-CREATE INDEX idx_created_at ON passport_records(created_at);
-CREATE INDEX idx_aadhar_number ON passport_records(aadhar_number);
-CREATE INDEX idx_mobile_number ON passport_records(mobile_number);
-CREATE INDEX idx_email ON passport_records(email);
-CREATE INDEX idx_pan_number ON passport_records(pan_number);
+CREATE INDEX IF NOT EXISTS idx_passport_number ON passport_records(passport_number);
+CREATE INDEX IF NOT EXISTS idx_full_name ON passport_records(full_name);
+CREATE INDEX IF NOT EXISTS idx_created_at ON passport_records(created_at);
+CREATE INDEX IF NOT EXISTS idx_aadhar_number ON passport_records(aadhar_number);
+CREATE INDEX IF NOT EXISTS idx_mobile_number ON passport_records(mobile_number);
+CREATE INDEX IF NOT EXISTS idx_email ON passport_records(email);
+CREATE INDEX IF NOT EXISTS idx_pan_number ON passport_records(pan_number);
 
 -- Enable Row Level Security
 ALTER TABLE passport_records ENABLE ROW LEVEL SECURITY;
