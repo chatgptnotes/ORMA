@@ -84,6 +84,10 @@ CREATE INDEX IF NOT EXISTS idx_pan_number ON passport_records(pan_number);
 -- Enable Row Level Security
 ALTER TABLE passport_records ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist and recreate them
+DROP POLICY IF EXISTS "Enable all operations for authenticated users" ON passport_records;
+DROP POLICY IF EXISTS "Enable read access for all users" ON passport_records;
+
 -- Create a policy that allows all operations for authenticated users
 CREATE POLICY "Enable all operations for authenticated users" ON passport_records
   FOR ALL USING (true);
@@ -101,5 +105,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop and recreate trigger to avoid conflicts
+DROP TRIGGER IF EXISTS update_passport_records_updated_at ON passport_records;
 CREATE TRIGGER update_passport_records_updated_at BEFORE UPDATE ON passport_records
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
