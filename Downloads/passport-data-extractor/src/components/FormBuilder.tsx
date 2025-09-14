@@ -1490,15 +1490,14 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         {/* Passport Upload Section - Rendered Second */}
         <div className="passport-upload-section">
         <div className="upload-header">
-          <h3>Quick Fill from Document</h3>
+          <h3>Please Upload documents as mentioned</h3>
           <p>Upload passport pages or ID documents to automatically fill the form</p>
         </div>
         
         <div className="upload-grid">
           {/* Front Page Upload */}
           <div className="upload-card">
-            <h4>📘 Front Page</h4>
-            <p>Main page with photo & details</p>
+            <h4>📘 Passport First Page</h4>
             <input
               type="file"
               id="passport-front"
@@ -1528,8 +1527,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
           {/* Back Page Upload */}
           <div className="upload-card">
-            <h4>📗 Back Page</h4>
-            <p>Address & additional info</p>
+            <h4>📗 Passport last/address Page</h4>
             <input
               type="file"
               id="passport-back"
@@ -1559,8 +1557,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
           {/* Visa/Stamp Page Upload */}
           <div className="upload-card">
-            <h4>📙 Visa/Stamps</h4>
-            <p>Visa or entry stamps page</p>
+            <h4>📙 Emirates ID or VISA</h4>
             <input
               type="file"
               id="passport-visa"
@@ -1590,8 +1587,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
           {/* Other Documents */}
           <div className="upload-card">
-            <h4>📄 Other Docs</h4>
-            <p>ID card, license, etc.</p>
+            <h4>📄 Aadhar copy (Optional)</h4>
             <input
               type="file"
               id="passport-other"
@@ -1621,8 +1617,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
           {/* Handwritten Form - Document 4 */}
           <div className="upload-card">
-            <h4>✍️ Handwritten Form</h4>
-            <p>Upload handwritten application</p>
+            <h4>✍️ (For ORMA Admin Only)</h4>
             <input
               type="file"
               id="handwritten-form"
