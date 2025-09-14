@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FormField } from '../types/formTypes';
 import { extractPassportData, mapPassportToFormFields } from '../services/passportExtractor';
 import { extractTextFromPDF } from '../services/pdfExtractor';
+import { extractHandwrittenFormData, mapHandwrittenToFormFields, formatHandwrittenDataForSupabase } from '../services/handwrittenFormExtractor';
 import ExtractedTextDisplay from './ExtractedTextDisplay';
 import { savePassportData, formatPassportDataForSupabase, updatePassportData } from '../services/supabaseService';
 import './FormBuilder.css';
@@ -399,17 +400,24 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       setUploadedFiles(prev => ({ ...prev, [fieldKey]: file }));
       setUploadedFilesPreviews(prev => ({ ...prev, [fieldKey]: previewUrl }));
       
-      // Check if this is a passport field and extract data
+      // Check if this is a passport or handwritten form field and extract data
       const field = fields.find(f => getFieldKey(f) === fieldKey);
-      const isPassportField = field?.label?.toLowerCase().includes('passport') || 
+      const isPassportField = field?.label?.toLowerCase().includes('passport') ||
                              field?.label?.toLowerCase().includes('Upload Passport') ||
                              fieldKey.toLowerCase().includes('passport');
-      
-      if (isPassportField) {
-        console.log('Passport field detected, extracting data...');
+
+      const isHandwrittenField = field?.label?.toLowerCase().includes('handwritten') ||
+                                field?.label?.toLowerCase().includes('hand written') ||
+                                field?.label?.toLowerCase().includes('form') ||
+                                field?.label?.toLowerCase().includes('application') ||
+                                fieldKey.toLowerCase().includes('handwritten') ||
+                                fieldKey.toLowerCase().includes('form');
+
+      if (isPassportField || isHandwrittenField) {
+        console.log(isPassportField ? 'Passport field detected, extracting data...' : 'Handwritten form detected, extracting data...');
         setIsExtracting({ ...isExtracting, [fieldKey]: true });
         setExtractionError(null);
-        
+
         try {
           // If it's a PDF, also extract and display the text
           if (file.type === 'application/pdf') {
@@ -417,16 +425,32 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             setExtractedText(pdfText);
             setLastPDFName(file.name);
           }
-          
-          const extractedData = await extractPassportData(file);
-          console.log('Extracted passport data:', extractedData);
+
+          let extractedData;
+          let mappedData;
+
+          if (isHandwrittenField) {
+            // Extract handwritten form data
+            const handwrittenData = await extractHandwrittenFormData(file);
+            console.log('Extracted handwritten form data:', handwrittenData);
+
+            // Map to form fields
+            mappedData = mapHandwrittenToFormFields(handwrittenData);
+            extractedData = handwrittenData;
+          } else {
+            // Extract passport data
+            extractedData = await extractPassportData(file);
+            console.log('Extracted passport data:', extractedData);
+            mappedData = mapPassportToFormFields(extractedData);
+          }
 
           // Store extracted data in the documents array for file uploads
           const newDoc = {
             id: Date.now(),
-            name: `Document ${extractedDocuments.length + 1}`,
+            name: isHandwrittenField ? `Document ${extractedDocuments.length + 1} (Handwritten)` : `Document ${extractedDocuments.length + 1}`,
             fileName: file.name,
-            pageType: 'file',
+            pageType: isHandwrittenField ? 'handwritten' : 'file',
+            documentType: isHandwrittenField ? 'Handwritten Form' : 'Passport',
             data: extractedData,
             timestamp: new Date().toISOString()
           };
@@ -446,8 +470,10 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           // Switch to the new document tab
           setActiveDocumentTab(Math.min(extractedDocuments.length, 5));
           
-          // Save extracted data to Supabase (updated to include record ID tracking)
-          const supabaseData = formatPassportDataForSupabase(extractedData, file.name);
+          // Save extracted data to Supabase
+          const supabaseData = isHandwrittenField
+            ? formatHandwrittenDataForSupabase(extractedData, mappedData)
+            : formatPassportDataForSupabase(extractedData, file.name);
           const saveResult = await savePassportData(supabaseData);
 
           if (saveResult.success) {
@@ -480,80 +506,25 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           });
           console.log('Form values after initialization:', Object.keys(currentFormValues));
           
-          const mappedData = mapPassportToFormFields(extractedData, currentFormValues);
-          console.log('Mapped data to form fields:', mappedData);
+          // Use appropriate mapping function based on document type
+          const mappedFormData = isHandwrittenField
+            ? { ...currentFormValues, ...mappedData } // mappedData already computed above
+            : mapPassportToFormFields(extractedData, currentFormValues);
+          console.log('Mapped data to form fields:', mappedFormData);
           console.log('Sample mapped values:', {
-            First_Name: mappedData['First_Name'],
-            Last_Name: mappedData['Last_Name'],
-            Permanent_Residence_Address: mappedData['Permanent_Residence_Address']
+            First_Name: mappedFormData['First_Name'],
+            Last_Name: mappedFormData['Last_Name'],
+            Permanent_Residence_Address: mappedFormData['Permanent_Residence_Address']
           });
           
-          // TEST: Directly set some values to verify form works
-          const testData = { ...currentFormValues };
-          
-          // Map extracted data directly to form fields
-          if (extractedData.fatherName) {
-            testData['Father/Guardian_Name'] = extractedData.fatherName;
-            // Also try alternative field key patterns
-            testData['Father_Guardian_Name'] = extractedData.fatherName;
-          }
-          if (extractedData.motherName) {
-            testData['Mother_Name'] = extractedData.motherName;
-          }
-          if (extractedData.address) {
-            testData['Permanent_Residence_Address'] = extractedData.address;
-          }
-          if (extractedData.fullName) {
-            testData['Applicant_Full_Name_in_CAPITAL'] = extractedData.fullName;
-          }
-          if (extractedData.givenName && extractedData.givenName !== '[UNCLEAR]') {
-            testData['First_Name'] = extractedData.givenName;
-          } else if (extractedData.fullName) {
-            // Try to extract first name from full name
-            const nameParts = extractedData.fullName.split(' ');
-            if (nameParts.length > 0) {
-              testData['First_Name'] = nameParts[0];
-            }
-          }
-          if (extractedData.surname && extractedData.surname !== '[UNCLEAR]') {
-            testData['Last_Name'] = extractedData.surname;
-          } else if (extractedData.fullName) {
-            // Try to extract last name from full name
-            const nameParts = extractedData.fullName.split(' ');
-            if (nameParts.length > 1) {
-              testData['Last_Name'] = nameParts[nameParts.length - 1];
-            }
-          }
-          // Map more passport fields
-          if (extractedData.passportNumber) {
-            testData['Passport_Number'] = extractedData.passportNumber;
-          }
-          if (extractedData.dateOfBirth) {
-            testData['Date_of_Birth'] = extractedData.dateOfBirth;
-          }
-          if (extractedData.dateOfIssue) {
-            testData['Passport_Issue_Date'] = extractedData.dateOfIssue;
-            testData['Date_of_Issue'] = extractedData.dateOfIssue;
-          }
-          if (extractedData.dateOfExpiry) {
-            testData['Passport_Expiry_Date'] = extractedData.dateOfExpiry;
-            testData['Date_of_Expiry'] = extractedData.dateOfExpiry;
-          }
-          if (extractedData.placeOfIssue) {
-            testData['Passport_Issued_Place'] = extractedData.placeOfIssue;
-            testData['Place_of_Issue'] = extractedData.placeOfIssue;
-          }
-          if (extractedData.spouseName) {
-            testData['Spouse_Name'] = extractedData.spouseName;
-          }
-          
-          console.log('Test data being set:', testData);
-          
+          // Auto-fill form with extracted data
+          console.log('Auto-filling form with mapped data:', mappedFormData);
+
           // Force update the form values
           setFormValues(prevValues => {
             console.log('Previous form values:', prevValues);
-            console.log('New form values being set:', testData);
-            return testData;
+            console.log('New form values being set:', mappedFormData);
+            return mappedFormData;
           });
           setIsExtracting({ ...isExtracting, [fieldKey]: false });
         } catch (error) {
@@ -1644,6 +1615,38 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                 <>✅ {uploadedFiles.other.name}</>
               ) : (
                 <>📷 Upload Other</>
+              )}
+            </label>
+          </div>
+
+          {/* Handwritten Form - Document 4 */}
+          <div className="upload-card">
+            <h4>✍️ Handwritten Form</h4>
+            <p>Upload handwritten application</p>
+            <input
+              type="file"
+              id="handwritten-form"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  // Set a specific field key for handwritten forms
+                  handleFileUpload('handwritten_form', file);
+                }
+              }}
+              disabled={isExtracting.handwritten_form}
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="handwritten-form" className={`upload-btn ${isExtracting.handwritten_form ? 'disabled' : ''} ${uploadedFilesData.handwritten_form ? 'uploaded' : ''}`}>
+              {isExtracting.handwritten_form ? (
+                <>
+                  <span className="spinner"></span>
+                  Extracting...
+                </>
+              ) : uploadedFilesData.handwritten_form ? (
+                <>✅ {uploadedFilesData.handwritten_form.name}</>
+              ) : (
+                <>📝 Upload Form</>
               )}
             </label>
           </div>
