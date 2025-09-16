@@ -849,12 +849,25 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     // Copy to clipboard as well
     navigator.clipboard.writeText(value);
 
-    // Show feedback
+    // Find the target field label for better feedback
+    const targetField = fields?.find(f => getFieldKey(f, fields?.indexOf(f) || 0) === targetFieldKey);
+    const targetLabel = targetField?.label || targetFieldKey;
+
+    // Show success feedback with field name
+    setSupabaseSaveStatus({
+      type: 'success',
+      message: `✓ Pasted to "${targetLabel}" field`
+    });
+
+    // Update copied field state for button feedback
     setCopiedField(`${sourceFieldName}->${targetFieldKey}`);
     setShowFieldSelector(null);
 
     // Reset feedback after 2 seconds
-    setTimeout(() => setCopiedField(null), 2000);
+    setTimeout(() => {
+      setCopiedField(null);
+      setSupabaseSaveStatus({ type: null, message: '' });
+    }, 2000);
   };
 
   // Get list of form fields for dropdown
@@ -866,7 +879,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     })).filter(f => f.type !== 'file' && f.type !== 'checkbox');
   };
 
-  // Component for copy/paste button with field selector (admin only)
+  // Component for copy/paste button with field selector
   const CopyPasteButton = ({ value, fieldName, label }: { value: string; fieldName: string; label: string }) => {
     const dropdownRef = React.useRef<HTMLDivElement>(null);
 
@@ -888,8 +901,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       }
     }, [showFieldSelector, fieldName]);
 
-    // Only show copy/paste buttons for admin users
-    if (!value || !isAdmin) return null;
+    // Show copy/paste buttons for all users
+    if (!value) return null;
 
     return (
       <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block', marginLeft: '0.5rem' }}>
@@ -902,19 +915,25 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           }}
           className="copy-btn"
           style={{
-            padding: '0.25rem 0.5rem',
-            background: copiedField?.includes(fieldName) ? '#10b981' : '#667eea',
+            padding: '0.3rem 0.6rem',
+            background: copiedField?.includes(fieldName) ? '#10b981' : '#6366f1',
             color: 'white',
             border: 'none',
-            borderRadius: '4px',
+            borderRadius: '6px',
             cursor: 'pointer',
-            fontSize: '0.75rem',
+            fontSize: '0.85rem',
             transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+            fontWeight: '500'
           }}
-          title="Copy or paste to form field"
+          title="Copy value and paste to form fields"
         >
-          {copiedField?.includes(fieldName) ? '✓' : '📋'} {copiedField?.includes(fieldName) ? 'Copied' : 'Copy/Paste'}
+          <span style={{ fontSize: '1.1rem' }}>{copiedField?.includes(fieldName) ? '✓' : '⧉'}</span>
+          <span>{copiedField?.includes(fieldName) ? 'Copied!' : 'Copy'}</span>
         </button>
         {showFieldSelector === fieldName && (
           <div style={{
@@ -932,40 +951,61 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             overflowY: 'auto'
           }}>
             <div style={{
-              padding: '0.5rem',
-              borderBottom: '1px solid #e0e0e0',
-              fontSize: '0.75rem',
-              fontWeight: 'bold',
-              color: '#666'
+              padding: '0.75rem',
+              borderBottom: '1px solid #e5e7eb',
+              fontSize: '0.85rem',
+              fontWeight: '600',
+              color: '#4b5563',
+              background: '#f9fafb'
             }}>
-              Select field to paste "{label}":
+              📍 Paste to field:
             </div>
-            {getFormFieldOptions().map(field => (
-              <button
-                key={field.key}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyToFormField(value, field.key, fieldName);
-                }}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  padding: '0.5rem',
-                  background: 'transparent',
-                  border: 'none',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  color: '#333',
-                  transition: 'background 0.2s ease'
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = '#f0f0f0'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                ➤ {field.label}
-              </button>
-            ))}
+            {getFormFieldOptions().length > 0 ? (
+              getFormFieldOptions().map(field => (
+                <button
+                  key={field.key}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyToFormField(value, field.key, fieldName);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%',
+                    padding: '0.6rem 0.75rem',
+                    background: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    color: '#374151',
+                    transition: 'all 0.15s ease',
+                    borderLeft: '3px solid transparent'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#f3f4f6';
+                    e.currentTarget.style.borderLeftColor = '#6366f1';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderLeftColor = 'transparent';
+                  }}
+                >
+                  <span style={{ marginRight: '0.5rem', color: '#6366f1' }}>→</span>
+                  {field.label}
+                </button>
+              ))
+            ) : (
+              <div style={{
+                padding: '1rem',
+                fontSize: '0.85rem',
+                color: '#9ca3af',
+                textAlign: 'center'
+              }}>
+                No compatible fields available
+              </div>
+            )}
           </div>
         )}
       </div>
