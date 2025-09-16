@@ -290,6 +290,15 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         setExtractedPassportData(editedPassportData);
         setIsEditingPassportData(false);
 
+        // Update the document in extractedDocuments array
+        setExtractedDocuments(prev =>
+          prev.map((doc, index) =>
+            index === activeDocumentTab
+              ? { ...doc, data: editedPassportData }
+              : doc
+          )
+        );
+
         // Also update form values
         const mappedData = mapPassportToFormFields(editedPassportData, formValues);
         setFormValues(mappedData);
@@ -297,7 +306,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         // Show success message
         setSupabaseSaveStatus({
           type: 'success',
-          message: 'Data updated successfully!'
+          message: 'Data updated and form auto-filled successfully!'
         });
         setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
       } else {
@@ -1124,14 +1133,48 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               </div>
               <div className="card-actions">
                 {!isEditingPassportData ? (
-                  <button
-                    className="edit-btn"
-                    onClick={handleEditPassportData}
-                    title="Edit extracted data"
-                    type="button"
-                  >
-                    ✏️ Edit
-                  </button>
+                  <>
+                    <button
+                      className="auto-fill-btn"
+                      onClick={() => {
+                        const currentDoc = extractedDocuments[activeDocumentTab];
+                        if (currentDoc && currentDoc.data) {
+                          // Use the mapPassportToFormFields function to map the data
+                          const mappedData = mapPassportToFormFields(currentDoc.data, formValues);
+                          setFormValues(mappedData);
+                          // Show success message
+                          setSupabaseSaveStatus({
+                            type: 'success',
+                            message: 'Form auto-filled with document data!'
+                          });
+                          setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
+                        }
+                      }}
+                      title="Auto-fill form with this document's data"
+                      type="button"
+                      style={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: 'bold',
+                        marginRight: '0.5rem'
+                      }}
+                    >
+                      🚀 Auto-Fill Data
+                    </button>
+                    <button
+                      className="edit-btn"
+                      onClick={handleEditPassportData}
+                      title="Edit extracted data"
+                      type="button"
+                    >
+                      ✏️ Edit
+                    </button>
+                  </>
                 ) : (
                   <>
                     <button
