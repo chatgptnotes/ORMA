@@ -4,7 +4,7 @@ import { extractPassportData, mapPassportToFormFields } from '../services/passpo
 import { extractTextFromPDF } from '../services/pdfExtractor';
 import { extractHandwrittenFormData, mapHandwrittenToFormFields, formatHandwrittenDataForSupabase } from '../services/handwrittenFormExtractor';
 import ExtractedTextDisplay from './ExtractedTextDisplay';
-import { savePassportData, formatPassportDataForSupabase, updatePassportData } from '../services/supabaseService';
+import { savePassportData, formatPassportDataForSupabase, updatePassportData, getLatestPassportRecord, mapDatabaseRecordToFormFields } from '../services/supabaseService';
 import './FormBuilder.css';
 
 interface FormBuilderProps {
@@ -37,6 +37,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(null);
   const [isEditingPassportData, setIsEditingPassportData] = useState(false);
   const [editedPassportData, setEditedPassportData] = useState<any>(null);
+  const [isLoadingLatest, setIsLoadingLatest] = useState(false);
+  const [editingDatabaseRecord, setEditingDatabaseRecord] = useState<boolean>(false);
 
   // Create a consistent field key generation function
   const getFieldKey = (field: FormField, fieldIndex?: number) => {
@@ -255,9 +257,36 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
+      // If we're editing a database record, update it
+      if (editingDatabaseRecord && currentRecordId) {
+        try {
+          const updateData = formatPassportDataForSupabase(formValues);
+          const result = await updatePassportData(currentRecordId, updateData);
+
+          if (result.success) {
+            setSupabaseSaveStatus({
+              type: 'success',
+              message: 'Record updated successfully!'
+            });
+            setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
+          } else {
+            setSupabaseSaveStatus({
+              type: 'error',
+              message: `Update failed: ${result.error}`
+            });
+          }
+        } catch (error) {
+          console.error('Error updating record:', error);
+          setSupabaseSaveStatus({
+            type: 'error',
+            message: 'Failed to update record'
+          });
+        }
+      }
+
       onSubmit(formValues);
     }
   };
@@ -272,6 +301,55 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   const handleCancelEdit = () => {
     setIsEditingPassportData(false);
     setEditedPassportData(null);
+  };
+
+  // Function to load the latest record from database
+  const handleLoadLatestRecord = async () => {
+    setIsLoadingLatest(true);
+    setSupabaseSaveStatus({ type: null, message: '' });
+
+    try {
+      const result = await getLatestPassportRecord();
+
+      if (result.success && result.data) {
+        // Map database fields to form fields
+        const mappedData = mapDatabaseRecordToFormFields(result.data);
+
+        // Update form values with mapped data
+        setFormValues(prev => ({
+          ...prev,
+          ...mappedData
+        }));
+
+        // Store the record ID for updating later
+        setCurrentRecordId(result.data.id || null);
+        setEditingDatabaseRecord(true);
+
+        // Show success message
+        setSupabaseSaveStatus({
+          type: 'success',
+          message: `✓ Loaded latest record (ID: ${result.data.id?.substring(0, 8)}...)`
+        });
+
+        // Clear message after 3 seconds
+        setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
+      } else {
+        setSupabaseSaveStatus({
+          type: 'error',
+          message: result.error || 'No records found in database'
+        });
+        setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
+      }
+    } catch (error) {
+      console.error('Error loading latest record:', error);
+      setSupabaseSaveStatus({
+        type: 'error',
+        message: 'Failed to load latest record'
+      });
+      setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
+    } finally {
+      setIsLoadingLatest(false);
+    }
   };
 
   // Handler for saving edited passport data
@@ -1488,7 +1566,102 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
       {/* Right Side - Main Form */}
       <div className="form-builder">
-        <h2>{formData.inputForm?.title || 'ORMA Kshemanidhi Application Form'}</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ margin: 0 }}>{formData.inputForm?.title || 'ORMA Kshemanidhi Application Form'}</h2>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {/* Load Latest Record Button */}
+            <button
+              type="button"
+              onClick={handleLoadLatestRecord}
+              disabled={isLoadingLatest || isReadOnly}
+              style={{
+                padding: '0.6rem 1.2rem',
+                background: isLoadingLatest ? '#9ca3af' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isLoadingLatest || isReadOnly ? 'not-allowed' : 'pointer',
+                fontSize: '0.9rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'all 0.2s ease'
+              }}
+              title="Load the latest record from database"
+            >
+              {isLoadingLatest ? (
+                <>
+                  <span className="spinner" style={{ border: '2px solid #f3f4f6', borderTopColor: 'white', borderRadius: '50%', width: '14px', height: '14px', animation: 'spin 1s linear infinite' }}></span>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: '1.1rem' }}>📥</span>
+                  Load Latest Record
+                </>
+              )}
+            </button>
+
+            {/* Clear Form Button */}
+            {editingDatabaseRecord && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFormValues({});
+                  setCurrentRecordId(null);
+                  setEditingDatabaseRecord(false);
+                  setSupabaseSaveStatus({
+                    type: 'success',
+                    message: 'Form cleared. Ready for new entry.'
+                  });
+                  setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 2000);
+                }}
+                style={{
+                  padding: '0.6rem 1rem',
+                  background: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  transition: 'all 0.2s ease'
+                }}
+                title="Clear form and start fresh"
+              >
+                <span>🗑️</span> Clear Form
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Show editing indicator */}
+        {editingDatabaseRecord && currentRecordId && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+            color: 'white',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.9rem',
+            fontWeight: '500'
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>✏️</span>
+            Editing Record ID: {currentRecordId.substring(0, 8)}...
+            <span style={{ marginLeft: 'auto', fontSize: '0.85rem', opacity: 0.9 }}>
+              (Form will update existing record on submit)
+            </span>
+          </div>
+        )}
 
         {/* Organization Fields Section - Rendered First */}
         {fields && fields.length > 0 && (
