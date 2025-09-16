@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FormBuilder from '../components/FormBuilder';
-import formData from '../data/processedFormData.json';
+import { processedFormData as formData } from '../data/processedFormData';
 import { ArrowLeft, Home, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

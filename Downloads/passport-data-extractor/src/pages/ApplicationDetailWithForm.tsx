@@ -4,7 +4,7 @@ import { ArrowLeft, Edit2, Trash2, FileText, Save, X } from 'lucide-react';
 import { getPassportRecord, updatePassportData, deletePassportRecord } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import FormBuilder from '../components/FormBuilder';
-import formData from '../data/processedFormData.json';
+import { processedFormData as formData } from '../data/processedFormData';
 import '../components/FormBuilder.css';
 
 const ApplicationDetailWithForm: React.FC = () => {

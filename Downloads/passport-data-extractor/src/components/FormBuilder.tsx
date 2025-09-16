@@ -441,7 +441,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             // Extract passport data
             extractedData = await extractPassportData(file);
             console.log('Extracted passport data:', extractedData);
-            mappedData = mapPassportToFormFields(extractedData);
+            mappedData = mapPassportToFormFields(extractedData, formValues);
           }
 
           // Store extracted data in the documents array for file uploads
