@@ -19,9 +19,9 @@
       },
       {
         "label": "Apply For",
-        "type": "NORKA ID or NORKA INSURANCE or KSHEMANIDHI - Dropdown",
-        "comment": "",
-        "inputType": "select",
+        "type": "NORKA ID or NORKA INSURANCE or KSHEMANIDHI - Select Multiple",
+        "comment": "Select all that apply",
+        "inputType": "checkbox",
         "options": [
           "NORKA ID",
           "NORKA INSURANCE",
