@@ -6,7 +6,14 @@ import { supabase, PassportRecord } from '../config/supabase';
 export async function savePassportData(data: PassportRecord): Promise<{ success: boolean; data?: PassportRecord; error?: string }> {
   try {
     console.log('Saving passport data to Supabase:', data);
-    
+    console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+
+    // Check if Supabase is configured
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      console.error('Supabase configuration missing');
+      return { success: false, error: 'Database configuration missing. Please check environment variables.' };
+    }
+
     // Insert the passport record
     const { data: insertedData, error } = await supabase
       .from('passport_records')
@@ -20,6 +27,10 @@ export async function savePassportData(data: PassportRecord): Promise<{ success:
 
     if (error) {
       console.error('Supabase insert error:', error);
+      // Provide more specific error messages
+      if (error.message.includes('fetch')) {
+        return { success: false, error: 'Network error: Unable to connect to database. Please check your internet connection.' };
+      }
       return { success: false, error: error.message };
     }
 
@@ -27,7 +38,11 @@ export async function savePassportData(data: PassportRecord): Promise<{ success:
     return { success: true, data: insertedData };
   } catch (error) {
     console.error('Error saving passport data:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    // Better error handling
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return { success: false, error: 'Network error: Unable to connect to database. Please check your connection.' };
+    }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred while saving data' };
   }
 }
 

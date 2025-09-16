@@ -169,24 +169,24 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
   // Map passport fields to ORMA form fields (using actual generated field keys)
   const fieldMappings: { [key: string]: string[] } = {
     // Name fields - multiple possible field keys for each
-    fullName: ['Applicant_Full_Name_in_CAPITAL', 'Full_Name'],
-    surname: ['Last_Name', 'Surname'], 
+    fullName: ['Applicant_Full_Name_in_CAPITAL', 'Full_Name', 'Applicant_Full_Name'],
+    surname: ['Last_Name', 'Surname'],
     givenName: ['First_Name', 'Given_Name'],
-    
+
     // Personal details
     dateOfBirth: ['Date_of_Birth', 'DOB'],
-    
+
     // Passport details
     passportNumber: ['Passport_Number', 'Passport_No'],
     dateOfIssue: ['Passport_Issue_Date', 'Date_of_Issue', 'Issue_Date'],
     dateOfExpiry: ['Passport_Expiry_Date', 'Date_of_Expiry', 'Expiry_Date'],
-    placeOfIssue: ['Passport_Issued_Place', 'Place_of_Issue', 'Issue_Place'],
-    
-    // Family details - using actual field keys
+    placeOfIssue: ['Passport_Issued_Place', 'Place_of_Issue', 'Issue_Place', 'Passport_issued_Place'],
+
+    // Family details - using actual field keys from form
     fatherName: ['Father/Guardian_Name', 'Father_Guardian_Name', 'Father_Name'],
-    motherName: ['Mother_Name', 'Mother'], 
+    motherName: ['Mother_Name', 'Mother'],
     spouseName: ['Spouse_Name', 'Spouse'],
-    
+
     // Address
     address: ['Permanent_Residence_Address', 'Address', 'Residence_Address'],
     pinCode: ['PIN_Code', 'Pincode', 'PIN'],
