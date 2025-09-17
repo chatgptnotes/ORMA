@@ -1,0 +1,5 @@
+{
+  "name": "Passport Data Extractor",
+  "description": "An intelligent application that uses Gemini to extract key information from an uploaded passport image, presenting the data in a clear and structured format.",
+  "requestFramePermissions": []
+}

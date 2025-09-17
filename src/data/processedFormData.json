@@ -1,0 +1,554 @@
+{
+  "inputForm": {
+    "title": "SUBMISSION FORM",
+    "fields": [
+      {
+        "label": "ORGANISATION",
+        "type": "ORMA/NON ORMA/ GRANMA/ TRACE/KERA/UMA/ OTHERs (list) if OTHERS provision to Enter ",
+        "comment": "",
+        "inputType": "select",
+        "options": [
+          "ORMA",
+          "NON ORMA",
+          "GRANMA",
+          "TRACE",
+          "KERA",
+          "UMA",
+          "OTHERs"
+        ]
+      },
+      {
+        "label": "Apply For",
+        "type": "NORKA ID or NORKA INSURANCE or KSHEMANIDHI - Select Multiple",
+        "comment": "Select all that apply",
+        "inputType": "checkbox",
+        "options": [
+          "NORKA ID",
+          "NORKA INSURANCE",
+          "KSHEMANIDHI"
+        ]
+      },
+      {
+        "label": "Type",
+        "type": "NEW or RENEWAL - dropdown",
+        "comment": "",
+        "inputType": "select",
+        "options": [
+          "NEW",
+          "RENEWAL"
+        ]
+      },
+      {
+        "label": "NORKA ID NUMER",
+        "type": "(optional)",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "KSHEMANIDHI ID NUMBER",
+        "type": "(optional)",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Applicant Full Name in CAPITAL",
+        "type": "APPLICANT NAME ",
+        "comment": "Verify and confirm if already filled",
+        "inputType": "text"
+      },
+      {
+        "label": "First Name",
+        "type": "First Name:(Given Name in the Passport)",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Middle Name",
+        "type": "Middle Name:",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Last Name",
+        "type": "Last Name (Surname in the PP) :",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "UAE Mobile Number",
+        "type": "UAE Mobile Number:",
+        "comment": "Input  digit mobile number  by customer (stating with 5xxxxxxxx. Country code will be there",
+        "inputType": "tel"
+      },
+      {
+        "label": "WhatsApp Number",
+        "type": "WhatsApp Number:",
+        "comment": "Input with country code",
+        "inputType": "tel"
+      },
+      {
+        "label": "Permanent Residence Address",
+        "type": "Permament Residence Address :",
+        "comment": "Autofill from Ppassport address page but editable",
+        "inputType": "text"
+      },
+      {
+        "label": "PIN Code",
+        "type": "PINcode",
+        "comment": "Autofill from Ppassport address page but editable",
+        "inputType": "text"
+      },
+      {
+        "label": "Email ID",
+        "type": "email id",
+        "comment": "input",
+        "inputType": "email"
+      },
+      {
+        "label": "Indian Active Mobile Number",
+        "type": "Indian Active Mobile Number ",
+        "comment": "input",
+        "inputType": "tel"
+      },
+      {
+        "label": "Local Body Type",
+        "type": "Local Body Type",
+        "comment": "Panchayath/Municipality/Corporation",
+        "inputType": "select",
+        "options": ["Panchayath", "Municipality", "Corporation"]
+      },
+      {
+        "label": "Taluk",
+        "type": "Taluk",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": "Village",
+        "type": "Village",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": "Local Body Name",
+        "type": "Name of Panchayath/Municipality/Corporation",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": "District",
+        "type": "District ",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": "Current Residence Address (Abroad)",
+        "type": "Abroad Current Residence address ",
+        "comment": "input",
+        "inputType": "text"
+      },
+      {
+        "label": "Aadhaar Number",
+        "type": "Aadhar number",
+        "comment": "Autofill if Aadhar copy uploaded",
+        "inputType": "text"
+      },
+      {
+        "label": "Nominee Details Section",
+        "type": "Nominee Details ",
+        "comment": "Enter nominee information",
+        "inputType": "text"
+      },
+      {
+        "label": "Nominee Date of Birth",
+        "type": " Nominee name ",
+        "comment": "DOB",
+        "inputType": "date"
+      },
+      {
+        "label": "Nominee 1 Name",
+        "type": "1",
+        "comment": "First nominee details",
+        "inputType": "text"
+      },
+      {
+        "label": "Nominee 2 Name",
+        "type": "2",
+        "comment": "Second nominee details",
+        "inputType": "text"
+      },
+      {
+        "label": "Nominee 3 Name",
+        "type": "3",
+        "comment": "Third nominee details",
+        "inputType": "text"
+      },
+      {
+        "label": "Form Collected By",
+        "type": "Form Collected by ",
+        "comment": "Input",
+        "inputType": "text"
+      },
+      {
+        "label": "Uploaded Copies",
+        "type": "Uploaded Copies",
+        "comment": "List of uploaded documents",
+        "inputType": "text"
+      },
+      {
+        "label": "Visa Number",
+        "type": "VISA Number",
+        "comment": "Auto filled from EID or VISA copy ( UIDNO)",
+        "inputType": "text"
+      },
+      {
+        "label": "Sponsor/Company Name",
+        "type": "SPONSOR / COMPANY NAME",
+        "comment": "Auto fill from Sponsor name in VISA copy or Employer Name from Emirates ID)",
+        "inputType": "text"
+      },
+      {
+        "label": "Visa Expiry Date",
+        "type": "VISA Expiry Date",
+        "comment": "Auto fill from  VISA copy or  from Emirates ID)",
+        "inputType": "date"
+      },
+      {
+        "label": "Occupation",
+        "type": "Occupation ",
+        "comment": "Auto fill Visa copy or Occupation from Emirates ID",
+        "inputType": "text"
+      },
+      {
+        "label": "Passport Number",
+        "type": "Passport Number",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": "Passport Issue Date",
+        "type": "Passport Issue Date",
+        "comment": "Auto fill from Passport",
+        "inputType": "date"
+      },
+      {
+        "label": "Passport Expiry Date",
+        "type": "Passport Expiry Date",
+        "comment": "Auto fill from Passport",
+        "inputType": "date"
+      },
+      {
+        "label": "Passport Issued Place",
+        "type": "Passport issued Place",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": "Date of Birth",
+        "type": "Date Of Birth",
+        "comment": "Auto fill from Passport",
+        "inputType": "date"
+      },
+      {
+        "label": "Father/Guardian Name",
+        "type": "Name of Father or Guardian",
+        "comment": "Auto fill from Passport",
+        "inputType": "text"
+      },
+      {
+        "label": "Nominee name",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Relationship",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "DOB",
+        "type": "date",
+        "comment": "",
+        "inputType": "date"
+      },
+      {
+        "label": "Age autocalculate",
+        "type": "number",
+        "comment": "Auto calculated from DOB",
+        "inputType": "number"
+      },
+      {
+        "label": "Current Occupation",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Current Residence",
+        "type": "text",
+        "comment": "",
+        "inputType": "text"
+      },
+      {
+        "label": "Mobile number (IND)",
+        "type": "tel",
+        "comment": "",
+        "inputType": "tel"
+      },
+      {
+        "label": "Percentage",
+        "type": "number",
+        "comment": "",
+        "inputType": "number"
+      }
+    ]
+  },
+  "outputForm": {
+    "title": "OUTPUT FORM",
+    "description": "This form should be downloadable with the autofilled Data from the Input form after preview",
+    "fields": [
+      {
+        "number": 1,
+        "label": "APPLICANT NAME ",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "First Name:(Given Name in the Passport)",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Middle Name:",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Last Name (Surname in the PP) :",
+        "subLabel": ""
+      },
+      {
+        "number": 2,
+        "label": "UAE Mobile Number:",
+        "subLabel": "+971"
+      },
+      {
+        "number": 3,
+        "label": "WhatsApp Number:",
+        "subLabel": ""
+      },
+      {
+        "number": 4,
+        "label": "Permament Residence Address :",
+        "subLabel": ""
+      },
+      {
+        "number": 5,
+        "label": "PINcode",
+        "subLabel": ""
+      },
+      {
+        "number": 6,
+        "label": "email id",
+        "subLabel": ""
+      },
+      {
+        "number": 7,
+        "label": "Indian Active Mobile Number ",
+        "subLabel": 91
+      },
+      {
+        "number": "",
+        "label": "Local Body Type",
+        "subLabel": " "
+      },
+      {
+        "number": 8,
+        "label": "Taluk",
+        "subLabel": ""
+      },
+      {
+        "number": 9,
+        "label": "Village",
+        "subLabel": ""
+      },
+      {
+        "number": 10,
+        "label": "Name of Panchayath/Muncipality/Corporation",
+        "subLabel": ""
+      },
+      {
+        "number": 11,
+        "label": "District ",
+        "subLabel": ""
+      },
+      {
+        "number": 12,
+        "label": "Abroad Current Residence address ",
+        "subLabel": ""
+      },
+      {
+        "number": 13,
+        "label": "Aadhar number",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Nominee Details ",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": " Nominee name ",
+        "subLabel": "Relationship"
+      },
+      {
+        "number": "",
+        "label": "1",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "2",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "3",
+        "subLabel": ""
+      },
+      {
+        "number": 12,
+        "label": "Form Collected by ",
+        "subLabel": ""
+      },
+      {
+        "number": 13,
+        "label": "Uploaded Copies",
+        "subLabel": ""
+      },
+      {
+        "number": 14,
+        "label": "VISA Number",
+        "subLabel": ""
+      },
+      {
+        "number": 15,
+        "label": "SPONSOR / COMPANY NAME",
+        "subLabel": ""
+      },
+      {
+        "number": 16,
+        "label": "VISA Expiry Date",
+        "subLabel": ""
+      },
+      {
+        "number": 17,
+        "label": "Passport Number",
+        "subLabel": ""
+      },
+      {
+        "number": 18,
+        "label": "Passport Issue Date",
+        "subLabel": ""
+      },
+      {
+        "number": 19,
+        "label": "Passport Expiry Date",
+        "subLabel": ""
+      },
+      {
+        "number": 20,
+        "label": "Passport issued Place",
+        "subLabel": ""
+      },
+      {
+        "number": 21,
+        "label": "Date Of Birth",
+        "subLabel": ""
+      },
+      {
+        "number": 22,
+        "label": "Name of Father or Guardian",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Nominee Details",
+        "subLabel": ""
+      },
+      {
+        "number": 1,
+        "label": "Nominee name",
+        "subLabel": ""
+      },
+      {
+        "number": 2,
+        "label": "Relationship",
+        "subLabel": ""
+      },
+      {
+        "number": 3,
+        "label": "DOB",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Age autocalculate",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Current Occupation",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Current Residence",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Mobile number (IND)",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Percentage",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Documents uploaded",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Passport Front  Page",
+        "subLabel": "√"
+      },
+      {
+        "number": "",
+        "label": "Passport Back/Address   Page",
+        "subLabel": "√"
+      },
+      {
+        "number": "",
+        "label": "Active  Emirates ID  or VISA Copy",
+        "subLabel": "√"
+      },
+      {
+        "number": "",
+        "label": "Aadhar copy",
+        "subLabel": ""
+      },
+      {
+        "number": "",
+        "label": "Header & Footer same as in sample form",
+        "subLabel": ""
+      }
+    ]
+  }
+}

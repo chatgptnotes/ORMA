@@ -1,0 +1,270 @@
+{
+  "Input Dataform": [
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": "Input  digit mobile number  by customer (stating with 5xxxxxxxx. Country code will be there"
+    },
+    {
+      "Comment ": "Input with country code"
+    },
+    {
+      "Comment ": "Autofill from Ppassport address page but editable"
+    },
+    {
+      "Comment ": "Autofill from Ppassport address page but editable"
+    },
+    {
+      "Comment ": "input"
+    },
+    {
+      "Comment ": "input"
+    },
+    {
+      "Comment ": "Panchayath/Muncipality/Corporation (list)"
+    },
+    {
+      "Comment ": "Input"
+    },
+    {
+      "Comment ": "Input"
+    },
+    {
+      "Comment ": "Input"
+    },
+    {
+      "Comment ": "Input"
+    },
+    {
+      "Comment ": "input"
+    },
+    {
+      "Comment ": "Autofill if Aadhar copy uploaded"
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": "DOB"
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": "Input"
+    },
+    {
+      "Comment ": ""
+    },
+    {
+      "Comment ": "Auto filled from EID or VISA copy ( UIDNO)"
+    },
+    {
+      "Comment ": "Auto fill from Sponsor name in VISA copy or Employer Name from Emirates ID)"
+    },
+    {
+      "Comment ": "Auto fill from  VISA copy or  from Emirates ID)"
+    },
+    {
+      "Comment ": "Auto fill Visa copy or Occupassion from Emirates ID"
+    },
+    {
+      "Comment ": "Auto fill from Passport"
+    },
+    {
+      "Comment ": "Auto fill from Passport"
+    },
+    {
+      "Comment ": "Auto fill from Passport"
+    },
+    {
+      "Comment ": "Auto fill from Passport"
+    },
+    {
+      "Comment ": "Auto fill from Passport"
+    },
+    {
+      "Comment ": "Auto fill from Passport"
+    }
+  ],
+  "Output PDF Dataform": [
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": "+971"
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": 91
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": " "
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": "Relationship"
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": "√"
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": "√"
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": "√"
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    },
+    {
+      "OUT PUT FORM WITH Header & FOTTER AS in GIVEN SAMPLE FORM": ""
+    }
+  ]
+}
