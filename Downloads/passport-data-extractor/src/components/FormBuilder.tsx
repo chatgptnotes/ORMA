@@ -5,6 +5,7 @@ import { extractTextFromPDF } from '../services/pdfExtractor';
 import { extractHandwrittenFormData, mapHandwrittenToFormFields, formatHandwrittenDataForSupabase } from '../services/handwrittenFormExtractor';
 import ExtractedTextDisplay from './ExtractedTextDisplay';
 import { savePassportData, formatPassportDataForSupabase, updatePassportData, getLatestPassportRecord, mapDatabaseRecordToFormFields } from '../services/supabaseService';
+import Toast from './Toast';
 import './FormBuilder.css';
 
 interface FormBuilderProps {
@@ -1003,6 +1004,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   );
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [showFieldSelector, setShowFieldSelector] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' | 'info'; details?: string } | null>(null);
 
   // Function to copy text to clipboard
   const copyToClipboard = async (text: string, fieldName: string) => {
@@ -1034,10 +1036,11 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     const targetField = fields?.find(f => getFieldKey(f, fields?.indexOf(f) || 0) === targetFieldKey);
     const targetLabel = targetField?.label || targetFieldKey;
 
-    // Show success feedback with field name
-    setSupabaseSaveStatus({
+    // Show success toast notification
+    setToast({
+      message: 'Data Pasted Successfully',
       type: 'success',
-      message: `✓ Pasted to "${targetLabel}" field`
+      details: `"${sourceFieldName}" has been pasted to "${targetLabel}" field${finalValue !== value ? ' (converted to UPPERCASE)' : ''}`
     });
 
     // Update copied field state for button feedback
@@ -1047,7 +1050,6 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     // Reset feedback after 2 seconds
     setTimeout(() => {
       setCopiedField(null);
-      setSupabaseSaveStatus({ type: null, message: '' });
     }, 2000);
   };
 
@@ -1583,13 +1585,35 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                         if (currentDoc && currentDoc.data) {
                           // Use the mapPassportToFormFields function to map the data
                           const mappedData = mapPassportToFormFields(currentDoc.data, formValues);
-                          setFormValues(mappedData);
-                          // Show success message
-                          setSupabaseSaveStatus({
-                            type: 'success',
-                            message: 'Form auto-filled with document data!'
+
+                          // Check how many fields were actually mapped
+                          const mappedFieldsCount = Object.keys(mappedData).filter(
+                            key => mappedData[key] && mappedData[key] !== formValues[key]
+                          ).length;
+
+                          if (mappedFieldsCount > 0) {
+                            setFormValues(mappedData);
+                            // Show success toast
+                            setToast({
+                              message: 'Auto-Fill Successful',
+                              type: 'success',
+                              details: `${mappedFieldsCount} fields were automatically filled from the ${currentDoc.name || 'document'}`
+                            });
+                          } else {
+                            // Show warning toast if no fields were mapped
+                            setToast({
+                              message: 'No Matching Fields Found',
+                              type: 'warning',
+                              details: 'Could not automatically map fields from this document. Please manually paste data using the paste buttons next to each field.'
+                            });
+                          }
+                        } else {
+                          // Show error if no data available
+                          setToast({
+                            message: 'No Data Available',
+                            type: 'error',
+                            details: 'No extracted data available from this document. Please ensure the document was properly processed.'
                           });
-                          setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
                         }
                       }}
                       title="Auto-fill form with this document's data"
@@ -2553,6 +2577,17 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         </div>
       </form>
     </div>
+
+    {/* Toast Notifications */}
+    {toast && (
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        details={toast.details}
+        duration={5000}
+        onClose={() => setToast(null)}
+      />
+    )}
     </div>
   );
 };
