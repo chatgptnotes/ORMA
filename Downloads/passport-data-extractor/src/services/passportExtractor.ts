@@ -324,8 +324,8 @@ export function validateDocumentFields(extractedData: ExtractedPassportData): Va
   // Define required fields for each document type
   const documentRequirements = {
     passport: {
-      required: ['passportNumber', 'fullName', 'dateOfBirth', 'nationality'],
-      optional: ['surname', 'givenName', 'dateOfIssue', 'dateOfExpiry', 'placeOfBirth', 'placeOfIssue', 'gender'],
+      required: ['passportNumber', 'fullName'], // Made validation less strict - only passport number and name are truly required
+      optional: ['surname', 'givenName', 'dateOfBirth', 'nationality', 'dateOfIssue', 'dateOfExpiry', 'placeOfBirth', 'placeOfIssue', 'gender'],
       identifiers: ['passportNumber']
     },
     emirates_id: {
@@ -416,11 +416,11 @@ export function validateDocumentFields(extractedData: ExtractedPassportData): Va
     if (!isValid) {
       if (documentType === 'passport') {
         if (missingFields.includes('passportNumber')) {
-          suggestion = '❌ Wrong Page: Please upload the main passport page with your photo and passport number (usually pages 1-2), not the address or visa pages.';
+          suggestion = '❌ Wrong Page Detected: This appears to be the ADDRESS/LAST PAGE of the passport. Please upload the MAIN PASSPORT PAGE with your PHOTO - this page contains passport number, date of birth, and personal details. The address page does NOT have date of birth.';
         } else if (missingFields.includes('fullName')) {
-          suggestion = '⚠️ Poor Quality: The image quality may be poor or text is not readable. Please upload a clearer, well-lit photo of the passport data page.';
+          suggestion = '⚠️ Poor Quality: Cannot read passport details. Please upload a clear photo of the MAIN PASSPORT PAGE (the one with your PHOTO). Date of birth is on the main page, NOT on the address/last page.';
         } else {
-          suggestion = '⚠️ Incomplete Data: Essential passport information is missing. Please upload the main passport page with photo and personal details.';
+          suggestion = '⚠️ Missing Information: Could not extract all passport details. Make sure you upload the MAIN PAGE with your photo (not the address page). The main page has: passport number, date of birth, name, and photo.';
         }
       } else if (documentType === 'emirates_id') {
         suggestion = '📋 Emirates ID: Please upload both front and back sides of the Emirates ID for complete information.';

@@ -284,26 +284,60 @@ export function parseGeminiResponse(response: string): any {
  */
 function parseIndianPassportText(text: string): any {
     const data: any = {};
-    
+
     try {
+        // Extract Date of Birth (various formats)
+        const dobMatch = text.match(/(?:Date of Birth|DOB|Birth Date|जन्म तिथि|जन्मतिथि)[^:]*[:]\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i) ||
+                        text.match(/(?:Born|Birth)[^:]*[:]\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i) ||
+                        text.match(/\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})\b/); // Any date format
+        if (dobMatch) {
+            data.dateOfBirth = dobMatch[1].replace(/[.\-]/g, '/');
+        }
+
+        // Extract Full Name
+        const nameMatch = text.match(/(?:Name|नाम|Full Name|Surname.*Given)[^:]*[:]\s*([^\n]+)/i);
+        if (nameMatch) {
+            data.fullName = nameMatch[1].trim();
+        }
+
+        // Extract Passport Number (various formats)
+        const passportMatch = text.match(/(?:Passport No|Passport Number|पासपोर्ट संख्या)[^:]*[:]\s*([A-Z]\d{7,8})/i) ||
+                            text.match(/\b([A-Z]\d{7,8})\b/); // Any passport format number
+        if (passportMatch) {
+            data.passportNumber = passportMatch[1];
+        }
+
+        // Extract Nationality
+        const nationalityMatch = text.match(/(?:Nationality|राष्ट्रीयता|Country)[^:]*[:]\s*([^\n]+)/i);
+        if (nationalityMatch) {
+            data.nationality = nationalityMatch[1].trim();
+        }
+
+        // Extract Gender
+        const genderMatch = text.match(/(?:Sex|Gender|लिंग)[^:]*[:]\s*(M|F|Male|Female|पुरुष|महिला)/i);
+        if (genderMatch) {
+            const gender = genderMatch[1].toUpperCase();
+            data.gender = gender.startsWith('M') || gender.includes('पुरुष') ? 'M' : 'F';
+        }
+
         // Extract Father's name
         const fatherMatch = text.match(/(?:पिता|Father|Legal Guardian)[^:]*[:]\s*([^\n]+)/i);
         if (fatherMatch) {
             data.fatherName = fatherMatch[1].trim();
         }
-        
+
         // Extract Mother's name
         const motherMatch = text.match(/(?:माता|Mother)[^:]*[:]\s*([^\n]+)/i);
         if (motherMatch) {
             data.motherName = motherMatch[1].trim();
         }
-        
+
         // Extract Spouse name
         const spouseMatch = text.match(/(?:पति|पत्नी|Spouse)[^:]*[:]\s*([^\n]+)/i);
         if (spouseMatch) {
             data.spouseName = spouseMatch[1].trim();
         }
-        
+
         // Extract Address
         const addressMatch = text.match(/(?:पता|Address)[^:]*[:]\s*([^\n]+(?:\n[^:\n]+)*)/i);
         if (addressMatch) {
@@ -313,35 +347,55 @@ function parseIndianPassportText(text: string): any {
                 .replace(/\s+/g, ' ')
                 .trim();
         }
-        
+
         // Extract PIN Code
         const pinMatch = text.match(/PIN:\s*(\d{6})/);
         if (pinMatch) {
             data.pinCode = pinMatch[1];
         }
-        
+
+        // Extract Date of Issue
+        const issueMatch = text.match(/(?:Date of Issue|Issue Date|जारी करने की तारीख)[^:]*[:]\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i);
+        if (issueMatch) {
+            data.dateOfIssue = issueMatch[1].replace(/[.\-]/g, '/');
+        }
+
+        // Extract Date of Expiry
+        const expiryMatch = text.match(/(?:Date of Expiry|Expiry Date|Valid Till|समाप्ति तिथि)[^:]*[:]\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i);
+        if (expiryMatch) {
+            data.dateOfExpiry = expiryMatch[1].replace(/[.\-]/g, '/');
+        }
+
+        // Extract Place of Birth
+        const pobMatch = text.match(/(?:Place of Birth|Birth Place|जन्म स्थान)[^:]*[:]\s*([^\n]+)/i);
+        if (pobMatch) {
+            data.placeOfBirth = pobMatch[1].trim();
+        }
+
+        // Extract Place of Issue
+        const poiMatch = text.match(/(?:Place of Issue|Issue Place|जारी करने का स्थान)[^:]*[:]\s*([^\n]+)/i);
+        if (poiMatch) {
+            data.placeOfIssue = poiMatch[1].trim();
+        }
+
         // Extract Old Passport Number
         const oldPassportMatch = text.match(/(?:पुराने|Old Passport)[^:]*[:][^T]*([T]\d+)/i);
         if (oldPassportMatch) {
             data.oldPassportNumber = oldPassportMatch[1];
         }
-        
+
         // Extract File Number
         const fileMatch = text.match(/(?:फाईल|File)[^:]*[:]\s*([^\n]+)/i);
         if (fileMatch) {
             data.fileNumber = fileMatch[1].trim();
         }
-        
-        // Extract Date (looking for DD/MM/YYYY format)
-        const dateMatch = text.match(/(\d{2}\/\d{2}\/\d{4})/);
-        if (dateMatch) {
-            data.dateOfIssue = dateMatch[1];
-        }
-        
+
         // Extract any standalone numbers that might be passport numbers
         const numberMatches = text.match(/[A-Z]\d{7,8}/g);
-        if (numberMatches && numberMatches.length > 0) {
+        if (numberMatches && numberMatches.length > 0 && !data.passportNumber) {
             data.possiblePassportNumbers = numberMatches;
+            // Use the first one as passport number if not already found
+            data.passportNumber = data.passportNumber || numberMatches[0];
         }
         
         console.log('Parsed Indian passport data:', data);
