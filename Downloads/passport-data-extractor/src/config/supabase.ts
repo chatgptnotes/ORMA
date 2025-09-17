@@ -35,8 +35,20 @@ export interface PassportRecord {
   
   // Address Information
   address?: string;
+  permanent_address?: string;
   pin_code?: string;
-  
+  district?: string;
+
+  // Contact Information
+  mobile_number?: string;
+  email?: string;
+  alternate_phone?: string;
+
+  // Additional Personal Information
+  aadhar_number?: string;
+  occupation?: string;
+  application_number?: string;
+
   // Form Data
   form_data?: any; // Complete form data as JSON
   

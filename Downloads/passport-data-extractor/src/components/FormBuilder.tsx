@@ -1930,9 +1930,9 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                               <div key={key} className="data-item">
                                 <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                                   <span className="data-label">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span>
-                                  <span className="data-value">{value}</span>
+                                  <span className="data-value">{String(value)}</span>
                                 </div>
-                                <SimpleCopyButton value={value as string} fieldName={key} />
+                                <SimpleCopyButton value={String(value)} fieldName={key} />
                               </div>
                             ))}
                           </div>
