@@ -237,8 +237,9 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   const handlePassportUpload = async (file: File, pageType: string) => {
     setIsExtracting({ ...isExtracting, [pageType]: true });
     setExtractionError(null);
+    setSupabaseSaveStatus({ type: null, message: '' });
     setUploadedFiles({ ...uploadedFiles, [pageType]: file });
-    
+
     try {
       // If it's a PDF, also extract and display the text
       if (file.type === 'application/pdf') {
@@ -246,7 +247,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         setExtractedText(pdfText);
         setLastPDFName(file.name);
       }
-      
+
       const extractedData = await extractPassportData(file);
 
       // Store extracted data in the documents array
@@ -299,7 +300,22 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       setFormValues(mappedData);
       setIsExtracting({ ...isExtracting, [pageType]: false });
     } catch (error) {
-      setExtractionError(error instanceof Error ? error.message : 'Failed to extract data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to extract data';
+      setExtractionError(errorMessage);
+
+      // Show validation error in status message
+      setSupabaseSaveStatus({
+        type: 'error',
+        message: errorMessage
+      });
+
+      // Clear the uploaded file since it's invalid
+      setUploadedFiles(prev => {
+        const newFiles = { ...prev };
+        delete newFiles[pageType];
+        return newFiles;
+      });
+
       setIsExtracting({ ...isExtracting, [pageType]: false });
     }
   };
@@ -662,8 +678,42 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           });
           setIsExtracting({ ...isExtracting, [fieldKey]: false });
         } catch (error) {
-          console.error('Error extracting passport data:', error);
-          setExtractionError(error instanceof Error ? error.message : 'Failed to extract data');
+          console.error('Error extracting data:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to extract data';
+          setExtractionError(errorMessage);
+
+          // Show validation error in status message
+          setSupabaseSaveStatus({
+            type: 'error',
+            message: errorMessage
+          });
+
+          // Clean up the uploaded file since it's invalid
+          if (uploadedFilesData[fieldKey]?.preview) {
+            URL.revokeObjectURL(uploadedFilesData[fieldKey].preview);
+          }
+
+          setUploadedFilesData(prev => {
+            const newData = { ...prev };
+            delete newData[fieldKey];
+            return newData;
+          });
+
+          setUploadedFiles(prev => {
+            const newFiles = { ...prev };
+            delete newFiles[fieldKey];
+            return newFiles;
+          });
+
+          setUploadedFilesPreviews(prev => {
+            const newPreviews = { ...prev };
+            delete newPreviews[fieldKey];
+            return newPreviews;
+          });
+
+          // Clear form value
+          handleChange(fieldKey, '');
+
           setIsExtracting({ ...isExtracting, [fieldKey]: false });
         }
       }
@@ -968,8 +1018,14 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
   // Function to copy and paste to a specific form field
   const copyToFormField = (value: string, targetFieldKey: string, sourceFieldName: string) => {
+    // Special handling for fields that need to be in CAPITAL
+    let finalValue = value;
+    if (targetFieldKey === 'Applicant_Full_Name_in_CAPITAL' || targetFieldKey === 'APPLICANT_NAME') {
+      finalValue = value.toUpperCase();
+    }
+
     // Update the form field value
-    handleChange(targetFieldKey, value);
+    handleChange(targetFieldKey, finalValue);
 
     // Copy to clipboard as well
     navigator.clipboard.writeText(value);
@@ -1004,9 +1060,54 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     })).filter(f => f.type !== 'file' && f.type !== 'checkbox');
   };
 
+  // Simple copy button component - just copy to clipboard
+  const SimpleCopyButton = ({ value, fieldName }: { value: string; fieldName: string }) => {
+    if (!value) return null;
+
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          copyToClipboard(value, fieldName);
+        }}
+        className="simple-copy-btn"
+        style={{
+          padding: '0.25rem',
+          background: copiedField === fieldName ? '#10b981' : 'transparent',
+          color: copiedField === fieldName ? 'white' : '#6366f1',
+          border: copiedField === fieldName ? 'none' : '1px solid #e0e0e0',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontSize: '1rem',
+          transition: 'all 0.2s ease',
+          marginLeft: '0.5rem',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '28px',
+          height: '28px',
+          minWidth: '28px'
+        }}
+        title={copiedField === fieldName ? 'Copied!' : `Copy ${fieldName}`}
+      >
+        {copiedField === fieldName ? '✓' : '📋'}
+      </button>
+    );
+  };
+
   // Component for copy/paste button with field selector
-  const CopyPasteButton = ({ value, fieldName, label }: { value: string; fieldName: string; label: string }) => {
+  const CopyPasteButton = ({ value, fieldName, label, showAdvanced = true }: { value: string; fieldName: string; label: string; showAdvanced?: boolean }) => {
     const dropdownRef = React.useRef<HTMLDivElement>(null);
+    const [fieldSearchQuery, setFieldSearchQuery] = React.useState('');
+    const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+    // Focus search input when dropdown opens
+    React.useEffect(() => {
+      if (showFieldSelector === fieldName && searchInputRef.current) {
+        setTimeout(() => searchInputRef.current?.focus(), 100);
+      }
+    }, [showFieldSelector, fieldName]);
 
     // Close dropdown when clicking outside
     React.useEffect(() => {
@@ -1014,6 +1115,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
           if (showFieldSelector === fieldName) {
             setShowFieldSelector(null);
+            setFieldSearchQuery(''); // Clear search when closing
           }
         }
       };
@@ -1029,36 +1131,43 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     // Show copy/paste buttons for all users
     if (!value) return null;
 
+    // If not showing advanced features, just show simple copy
+    if (!showAdvanced) {
+      return <SimpleCopyButton value={value} fieldName={fieldName} />;
+    }
+
     return (
-      <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-block', marginLeft: '0.5rem' }}>
+      <div ref={dropdownRef} style={{ position: 'relative', display: 'inline-flex', marginLeft: '0.5rem', gap: '0.25rem' }}>
+        {/* Simple Copy Button */}
+        <SimpleCopyButton value={value} fieldName={fieldName} />
+
+        {/* Advanced Paste Button */}
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            copyToClipboard(value, fieldName);
             setShowFieldSelector(showFieldSelector === fieldName ? null : fieldName);
           }}
-          className="copy-btn"
+          className="paste-btn"
           style={{
-            padding: '0.3rem 0.6rem',
-            background: copiedField?.includes(fieldName) ? '#10b981' : '#6366f1',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
+            padding: '0.25rem',
+            background: showFieldSelector === fieldName ? '#6366f1' : 'transparent',
+            color: showFieldSelector === fieldName ? 'white' : '#6366f1',
+            border: showFieldSelector === fieldName ? 'none' : '1px solid #e0e0e0',
+            borderRadius: '4px',
             cursor: 'pointer',
-            fontSize: '0.85rem',
+            fontSize: '1rem',
             transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.3rem',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-            fontWeight: '500'
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
+            minWidth: '28px'
           }}
-          title="Copy value and paste to form fields"
+          title="Paste to form field"
         >
-          <span style={{ fontSize: '1.1rem' }}>{copiedField?.includes(fieldName) ? '✓' : '⧉'}</span>
-          <span>{copiedField?.includes(fieldName) ? 'Copied!' : 'Copy'}</span>
+          ⤵
         </button>
         {showFieldSelector === fieldName && (
           <div style={{
@@ -1068,69 +1177,220 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             marginTop: '0.25rem',
             background: 'white',
             border: '1px solid #e0e0e0',
-            borderRadius: '4px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: 1000,
-            minWidth: '200px',
-            maxHeight: '200px',
-            overflowY: 'auto'
+            minWidth: '280px',
+            maxWidth: '350px',
+            maxHeight: '400px',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
+            {/* Header with Search */}
             <div style={{
               padding: '0.75rem',
               borderBottom: '1px solid #e5e7eb',
-              fontSize: '0.85rem',
-              fontWeight: '600',
-              color: '#4b5563',
-              background: '#f9fafb'
+              background: '#f9fafb',
+              borderRadius: '8px 8px 0 0'
             }}>
-              📍 Paste to field:
-            </div>
-            {getFormFieldOptions().length > 0 ? (
-              getFormFieldOptions().map(field => (
-                <button
-                  key={field.key}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copyToFormField(value, field.key, fieldName);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    width: '100%',
-                    padding: '0.6rem 0.75rem',
-                    background: 'transparent',
-                    border: 'none',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                    color: '#374151',
-                    transition: 'all 0.15s ease',
-                    borderLeft: '3px solid transparent'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = '#f3f4f6';
-                    e.currentTarget.style.borderLeftColor = '#6366f1';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderLeftColor = 'transparent';
-                  }}
-                >
-                  <span style={{ marginRight: '0.5rem', color: '#6366f1' }}>→</span>
-                  {field.label}
-                </button>
-              ))
-            ) : (
               <div style={{
-                padding: '1rem',
                 fontSize: '0.85rem',
-                color: '#9ca3af',
-                textAlign: 'center'
+                fontWeight: '600',
+                color: '#4b5563',
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
               }}>
-                No compatible fields available
+                <span>📍</span>
+                <span>Paste to field:</span>
               </div>
-            )}
+              {/* Search Input */}
+              <div style={{
+                position: 'relative'
+              }}>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={fieldSearchQuery}
+                  onChange={(e) => setFieldSearchQuery(e.target.value)}
+                  placeholder="Search fields..."
+                  style={{
+                    width: '100%',
+                    padding: '0.5rem 0.75rem 0.5rem 2rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    transition: 'border-color 0.2s'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#6366f1';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(99, 102, 241, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span style={{
+                  position: 'absolute',
+                  left: '0.6rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: '#9ca3af',
+                  fontSize: '0.9rem',
+                  pointerEvents: 'none'
+                }}>
+                  🔍
+                </span>
+                {fieldSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFieldSearchQuery('');
+                      searchInputRef.current?.focus();
+                    }}
+                    style={{
+                      position: 'absolute',
+                      right: '0.5rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: '#6b7280',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      fontSize: '0.7rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Field List */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              maxHeight: '300px'
+            }}>
+              {(() => {
+                const allFields = getFormFieldOptions();
+                const filteredFields = fieldSearchQuery
+                  ? allFields.filter(field =>
+                      field.label.toLowerCase().includes(fieldSearchQuery.toLowerCase()) ||
+                      field.key.toLowerCase().includes(fieldSearchQuery.toLowerCase())
+                    )
+                  : allFields;
+
+                if (filteredFields.length > 0) {
+                  return (
+                    <>
+                      {fieldSearchQuery && (
+                        <div style={{
+                          padding: '0.5rem 0.75rem',
+                          fontSize: '0.75rem',
+                          color: '#6b7280',
+                          borderBottom: '1px solid #f3f4f6'
+                        }}>
+                          Found {filteredFields.length} field{filteredFields.length !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                      {filteredFields.map(field => {
+                        const isCapitalField = field.key === 'Applicant_Full_Name_in_CAPITAL' || field.key === 'APPLICANT_NAME';
+                        return (
+                          <button
+                            key={field.key}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyToFormField(value, field.key, fieldName);
+                              setFieldSearchQuery(''); // Clear search after selection
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              width: '100%',
+                              padding: '0.6rem 0.75rem',
+                              background: 'transparent',
+                              border: 'none',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              color: '#374151',
+                              transition: 'all 0.15s ease',
+                              borderLeft: '3px solid transparent'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.background = '#f3f4f6';
+                              e.currentTarget.style.borderLeftColor = '#6366f1';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.borderLeftColor = 'transparent';
+                            }}
+                          >
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              flex: 1,
+                              minWidth: 0
+                            }}>
+                              <span style={{ marginRight: '0.5rem', color: '#6366f1' }}>→</span>
+                              <span style={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                {field.label}
+                              </span>
+                            </div>
+                            {isCapitalField && (
+                              <span style={{
+                                fontSize: '0.7rem',
+                                background: '#6366f1',
+                                color: 'white',
+                                padding: '0.1rem 0.3rem',
+                                borderRadius: '3px',
+                                marginLeft: '0.5rem',
+                                flexShrink: 0
+                              }}>
+                                AUTO-CAPS
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </>
+                  );
+                } else {
+                  return (
+                    <div style={{
+                      padding: '2rem 1rem',
+                      fontSize: '0.85rem',
+                      color: '#9ca3af',
+                      textAlign: 'center'
+                    }}>
+                      {fieldSearchQuery
+                        ? `No fields matching "${fieldSearchQuery}"`
+                        : 'No compatible fields available'}
+                    </div>
+                  );
+                }
+              })()}
+            </div>
           </div>
         )}
       </div>
@@ -1188,6 +1448,23 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       {extractedDocuments.length > 0 && (
         <div className="extracted-data-sidebar">
           <div className="extracted-data-card">
+            {/* Helper Text for Important Fields */}
+            <div style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              padding: '0.75rem 1rem',
+              fontSize: '0.85rem',
+              borderRadius: '8px 8px 0 0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <span style={{ fontSize: '1.2rem' }}>💡</span>
+              <span>
+                <strong>Highlighted fields</strong> are essential for ORMA form. Use <strong>⤵ paste button</strong> to auto-fill form fields.
+              </span>
+            </div>
+
             {/* Document Tabs */}
             <div className="document-tabs" style={{
               display: 'flex',
@@ -1379,9 +1656,9 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                       <div className="data-section">
                   <h4>👤 Personal Information</h4>
                   {(currentData.fullName || isEditingPassportData) && (
-                    <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ flex: 1 }}>
-                        <span className="data-label">Full Name:</span>
+                    <div className="data-item" style={{ background: 'rgba(102, 126, 234, 0.1)', border: '2px solid #667eea' }}>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                        <span className="data-label" style={{ color: '#667eea', fontWeight: 'bold' }}>Full Name:</span>
                         {isEditingPassportData ? (
                           <input
                             type="text"
@@ -1390,17 +1667,17 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                             onChange={(e) => handleEditFieldChange('fullName', e.target.value)}
                           />
                         ) : (
-                          <span className="data-value">{currentData.fullName}</span>
+                          <span className="data-value" style={{ fontWeight: '600' }}>{currentData.fullName}</span>
                         )}
                       </div>
                       {!isEditingPassportData && currentData.fullName && (
-                        <CopyPasteButton value={currentData.fullName} fieldName="fullName" label="Full Name" />
+                        <CopyPasteButton value={currentData.fullName} fieldName="fullName" label="Full Name" showAdvanced={true} />
                       )}
                     </div>
                   )}
                   {(currentData.givenName || isEditingPassportData) && currentData.givenName !== '[UNCLEAR]' && (
-                    <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ flex: 1 }}>
+                    <div className="data-item">
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                         <span className="data-label">Given Name:</span>
                         {isEditingPassportData ? (
                           <input
@@ -1414,13 +1691,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                         )}
                       </div>
                       {!isEditingPassportData && currentData.givenName && (
-                        <CopyPasteButton value={currentData.givenName} fieldName="givenName" label="Given Name" />
+                        <CopyPasteButton value={currentData.givenName} fieldName="givenName" label="Given Name" showAdvanced={false} />
                       )}
                     </div>
                   )}
                   {(currentData.surname || isEditingPassportData) && currentData.surname !== '[UNCLEAR]' && (
-                    <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ flex: 1 }}>
+                    <div className="data-item">
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                         <span className="data-label">Surname:</span>
                         {isEditingPassportData ? (
                           <input
@@ -1434,13 +1711,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                         )}
                       </div>
                       {!isEditingPassportData && currentData.surname && (
-                        <CopyPasteButton value={currentData.surname} fieldName="surname" label="Surname" />
+                        <CopyPasteButton value={currentData.surname} fieldName="surname" label="Surname" showAdvanced={false} />
                       )}
                     </div>
                   )}
                   {(currentData.dateOfBirth || isEditingPassportData) && (
-                    <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ flex: 1 }}>
+                    <div className="data-item">
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                         <span className="data-label">Date of Birth:</span>
                         {isEditingPassportData ? (
                           <input
@@ -1454,13 +1731,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                         )}
                       </div>
                       {!isEditingPassportData && currentData.dateOfBirth && (
-                        <CopyPasteButton value={currentData.dateOfBirth} fieldName="dateOfBirth" label="Date of Birth" />
+                        <CopyPasteButton value={currentData.dateOfBirth} fieldName="dateOfBirth" label="Date of Birth" showAdvanced={false} />
                       )}
                     </div>
                   )}
                   {(currentData.gender || isEditingPassportData) && (
-                    <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ flex: 1 }}>
+                    <div className="data-item">
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                         <span className="data-label">Gender:</span>
                         {isEditingPassportData ? (
                           <input
@@ -1474,7 +1751,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                         )}
                       </div>
                       {!isEditingPassportData && currentData.gender && (
-                        <CopyPasteButton value={currentData.gender} fieldName="gender" label="Gender" />
+                        <CopyPasteButton value={currentData.gender} fieldName="gender" label="Gender" showAdvanced={false} />
                       )}
                     </div>
                   )}
@@ -1486,30 +1763,30 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                       <div className="data-section">
                         <h4>👨‍👩‍👧 Family Information</h4>
                         {currentData.fatherName && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                               <span className="data-label">Father's Name:</span>
                               <span className="data-value">{currentData.fatherName}</span>
                             </div>
-                            <CopyPasteButton value={currentData.fatherName} fieldName="fatherName" label="Father's Name" />
+                            <CopyPasteButton value={currentData.fatherName} fieldName="fatherName" label="Father's Name" showAdvanced={false} />
                           </div>
                         )}
                         {currentData.motherName && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                               <span className="data-label">Mother's Name:</span>
                               <span className="data-value">{currentData.motherName}</span>
                             </div>
-                            <CopyPasteButton value={currentData.motherName} fieldName="motherName" label="Mother's Name" />
+                            <CopyPasteButton value={currentData.motherName} fieldName="motherName" label="Mother's Name" showAdvanced={false} />
                           </div>
                         )}
                         {currentData.spouseName && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                               <span className="data-label">Spouse Name:</span>
                               <span className="data-value">{currentData.spouseName}</span>
                             </div>
-                            <CopyPasteButton value={currentData.spouseName} fieldName="spouseName" label="Spouse Name" />
+                            <CopyPasteButton value={currentData.spouseName} fieldName="spouseName" label="Spouse Name" showAdvanced={false} />
                           </div>
                         )}
                       </div>
@@ -1520,48 +1797,48 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                       <div className="data-section">
                         <h4>📘 Passport Details</h4>
                         {currentData.passportNumber && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
-                              <span className="data-label">Passport No:</span>
-                              <span className="data-value">{currentData.passportNumber}</span>
+                          <div className="data-item" style={{ background: 'rgba(102, 126, 234, 0.1)', border: '2px solid #667eea' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label" style={{ color: '#667eea', fontWeight: 'bold' }}>Passport No:</span>
+                              <span className="data-value" style={{ fontWeight: '600' }}>{currentData.passportNumber}</span>
                             </div>
-                            <CopyPasteButton value={currentData.passportNumber} fieldName="passportNumber" label="Passport Number" />
+                            <CopyPasteButton value={currentData.passportNumber} fieldName="passportNumber" label="Passport Number" showAdvanced={true} />
                           </div>
                         )}
                         {currentData.dateOfIssue && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                               <span className="data-label">Issue Date:</span>
                               <span className="data-value">{currentData.dateOfIssue}</span>
                             </div>
-                            <CopyPasteButton value={currentData.dateOfIssue} fieldName="dateOfIssue" label="Issue Date" />
+                            <CopyPasteButton value={currentData.dateOfIssue} fieldName="dateOfIssue" label="Issue Date" showAdvanced={false} />
                           </div>
                         )}
                         {currentData.dateOfExpiry && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
-                              <span className="data-label">Expiry Date:</span>
-                              <span className="data-value">{currentData.dateOfExpiry}</span>
+                          <div className="data-item" style={{ background: 'rgba(102, 126, 234, 0.1)', border: '2px solid #667eea' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label" style={{ color: '#667eea', fontWeight: 'bold' }}>Expiry Date:</span>
+                              <span className="data-value" style={{ fontWeight: '600' }}>{currentData.dateOfExpiry}</span>
                             </div>
-                            <CopyPasteButton value={currentData.dateOfExpiry} fieldName="dateOfExpiry" label="Expiry Date" />
+                            <CopyPasteButton value={currentData.dateOfExpiry} fieldName="dateOfExpiry" label="Expiry Date" showAdvanced={true} />
                           </div>
                         )}
                         {currentData.placeOfIssue && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                               <span className="data-label">Place of Issue:</span>
                               <span className="data-value">{currentData.placeOfIssue}</span>
                             </div>
-                            <CopyPasteButton value={currentData.placeOfIssue} fieldName="placeOfIssue" label="Place of Issue" />
+                            <CopyPasteButton value={currentData.placeOfIssue} fieldName="placeOfIssue" label="Place of Issue" showAdvanced={true} />
                           </div>
                         )}
                         {currentData.placeOfBirth && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                               <span className="data-label">Place of Birth:</span>
                               <span className="data-value">{currentData.placeOfBirth}</span>
                             </div>
-                            <CopyPasteButton value={currentData.placeOfBirth} fieldName="placeOfBirth" label="Place of Birth" />
+                            <CopyPasteButton value={currentData.placeOfBirth} fieldName="placeOfBirth" label="Place of Birth" showAdvanced={false} />
                           </div>
                         )}
                       </div>
@@ -1571,20 +1848,20 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                     {currentData.address && (
                       <div className="data-section">
                         <h4>🏠 Address</h4>
-                        <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ flex: 1 }}>
-                            <span className="data-label">Address:</span>
-                            <span className="data-value">{currentData.address}</span>
+                        <div className="data-item" style={{ background: 'rgba(102, 126, 234, 0.1)', border: '2px solid #667eea' }}>
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                            <span className="data-label" style={{ color: '#667eea', fontWeight: 'bold' }}>Address:</span>
+                            <span className="data-value" style={{ fontWeight: '600' }}>{currentData.address}</span>
                           </div>
-                          <CopyPasteButton value={currentData.address} fieldName="address" label="Address" />
+                          <CopyPasteButton value={currentData.address} fieldName="address" label="Address" showAdvanced={true} />
                         </div>
                         {currentData.pinCode && (
-                          <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ flex: 1 }}>
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                               <span className="data-label">PIN Code:</span>
                               <span className="data-value">{currentData.pinCode}</span>
                             </div>
-                            <CopyPasteButton value={currentData.pinCode} fieldName="pinCode" label="PIN Code" />
+                            <CopyPasteButton value={currentData.pinCode} fieldName="pinCode" label="PIN Code" showAdvanced={false} />
                           </div>
                         )}
                       </div>
@@ -1594,15 +1871,51 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                     {currentData.nationality && (
                       <div className="data-section">
                         <h4>🌍 Other Details</h4>
-                        <div className="data-item" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <div style={{ flex: 1 }}>
+                        <div className="data-item">
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
                             <span className="data-label">Nationality:</span>
                             <span className="data-value">{currentData.nationality}</span>
                           </div>
-                          <CopyPasteButton value={currentData.nationality} fieldName="nationality" label="Nationality" />
+                          <CopyPasteButton value={currentData.nationality} fieldName="nationality" label="Nationality" showAdvanced={false} />
                         </div>
                       </div>
                     )}
+
+                    {/* Display any other extracted fields not shown above */}
+                    {(() => {
+                      const standardFields = [
+                        'fullName', 'givenName', 'surname', 'dateOfBirth', 'gender',
+                        'fatherName', 'motherName', 'spouseName',
+                        'passportNumber', 'dateOfIssue', 'dateOfExpiry', 'placeOfIssue', 'placeOfBirth',
+                        'address', 'pinCode', 'nationality'
+                      ];
+
+                      const additionalFields = Object.entries(currentData || {})
+                        .filter(([key, value]) =>
+                          !standardFields.includes(key) &&
+                          value &&
+                          typeof value === 'string' &&
+                          key !== 'rawExtractedText'
+                        );
+
+                      if (additionalFields.length > 0) {
+                        return (
+                          <div className="data-section">
+                            <h4>📝 Additional Information</h4>
+                            {additionalFields.map(([key, value]) => (
+                              <div key={key} className="data-item">
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                  <span className="data-label">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</span>
+                                  <span className="data-value">{value}</span>
+                                </div>
+                                <SimpleCopyButton value={value as string} fieldName={key} />
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </>
                 );
               })()}
@@ -2015,8 +2328,19 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         </div>
         
         {extractionError && (
-          <div className="extraction-error">
-            ⚠️ {extractionError}
+          <div className="extraction-error" style={{
+            background: '#fee',
+            border: '2px solid #f44',
+            borderRadius: '8px',
+            padding: '1rem',
+            margin: '1rem 0',
+            color: '#c00',
+            fontWeight: '500'
+          }}>
+            <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
+              ⚠️ Document Validation Failed
+            </div>
+            <div>{extractionError}</div>
           </div>
         )}
         
