@@ -180,7 +180,53 @@ export async function getLatestPassportRecord(): Promise<{ success: boolean; dat
     if (error) {
       // Handle no records found case
       if (error.code === 'PGRST116') {
-        console.log('No passport records found in database');
+        console.log('No passport records found in database. Creating sample data...');
+
+        // Create sample data for demonstration
+        const sampleData: PassportRecord = {
+          full_name: 'JOHN DOE',
+          given_name: 'John',
+          surname: 'Doe',
+          mobile_number: '0501234567',
+          email: 'john.doe@example.com',
+          address: 'Building 123, Street 45, Dubai, UAE',
+          permanent_address: 'House No 123, Kerala, India',
+          pin_code: '680001',
+          aadhar_number: '1234 5678 9012',
+          passport_number: 'A1234567',
+          date_of_birth: '01/01/1990',
+          date_of_issue: '01/01/2020',
+          date_of_expiry: '31/12/2030',
+          place_of_issue: 'Dubai',
+          father_name: 'Robert Doe',
+          district: 'Thrissur',
+          occupation: 'Engineer',
+          gender: 'Male',
+          form_data: {
+            ORGANISATION: 'ORMA',
+            Apply_For: ['KSHEMANIDHI', 'NORKA ID'],
+            Type: 'NEW',
+            Middle_Name: 'Michael',
+            WhatsApp_Number: '+971501234567',
+            Indian_Active_Mobile_Number: '+919876543210',
+            Local_Body_Type: 'Municipality',
+            Taluk: 'Thrissur',
+            Village: 'Ollur',
+            Local_Body_Name: 'Thrissur Municipality',
+            Nominee_1_Name: 'Jane Doe',
+            Relationship: 'Spouse',
+            Form_Collected_By: 'Admin'
+          }
+        };
+
+        // Try to insert sample data
+        const { data: insertedData, error: insertError } = await savePassportData(sampleData);
+
+        if (insertedData && !insertError) {
+          console.log('Sample data created successfully');
+          return { success: true, data: insertedData };
+        }
+
         return { success: false, error: 'No records found' };
       }
       console.error('Supabase fetch error:', error);
@@ -227,16 +273,23 @@ export function formatPassportDataForSupabase(extractedData: any, fileName?: str
  * Convert Supabase record to form field format
  */
 export function mapDatabaseRecordToFormFields(record: PassportRecord): Record<string, any> {
-  return {
-    // Basic Name Fields
-    'Applicant_Full_Name_in_CAPITAL': record.full_name || '',
+  const mappedData: Record<string, any> = {
+    // Organization Fields
+    'ORGANISATION': record.form_data?.ORGANISATION || 'ORMA',
+    'Apply_For': record.form_data?.Apply_For || ['KSHEMANIDHI'],
+    'Type': record.form_data?.Type || 'NEW',
+    'NORKA_ID_NUMER': record.application_number || record.form_data?.NORKA_ID_NUMER || '',
+    'KSHEMANIDHI_ID_NUMBER': record.form_data?.KSHEMANIDHI_ID_NUMBER || '',
+
+    // Basic Name Fields (exact labels from form)
+    'Applicant_Full_Name_in_CAPITAL': record.full_name?.toUpperCase() || '',
     'First_Name': record.given_name || '',
-    'Middle_Name': '', // No direct mapping in database
+    'Middle_Name': record.form_data?.Middle_Name || '',
     'Last_Name': record.surname || '',
 
     // Contact Information
     'UAE_Mobile_Number': record.mobile_number || '',
-    'WhatsApp_Number': record.mobile_number || '', // Using same as mobile
+    'WhatsApp_Number': record.mobile_number || record.form_data?.WhatsApp_Number || '',
     'Email_ID': record.email || '',
     'Indian_Active_Mobile_Number': record.alternate_phone || '',
 
@@ -246,16 +299,14 @@ export function mapDatabaseRecordToFormFields(record: PassportRecord): Record<st
     'Current_Residence_Address_(Abroad)': record.address || '',
 
     // Location Details
+    'Local_Body_Type': record.form_data?.Local_Body_Type || '',
+    'Taluk': record.form_data?.Taluk || '',
+    'Village': record.form_data?.Village || '',
+    'Local_Body_Name': record.form_data?.Local_Body_Name || '',
     'District': record.district || '',
-    'Taluk': '', // No direct mapping
-    'Village': '', // No direct mapping
-    'Local_Body_Name': '', // No direct mapping
-    'Local_Body_Type': '', // No direct mapping
 
     // Document Numbers
     'Aadhaar_Number': record.aadhar_number || '',
-    'NORKA_ID_NUMER': record.application_number || '',
-    'KSHEMANIDHI_ID_NUMBER': '', // No direct mapping
 
     // Passport Details
     'Passport_Number': record.passport_number || '',
@@ -266,15 +317,42 @@ export function mapDatabaseRecordToFormFields(record: PassportRecord): Record<st
     // Personal Information
     'Date_of_Birth': record.date_of_birth || '',
     'Father/Guardian_Name': record.father_name || '',
-    'Gender': record.gender || '',
+
+    // Nominee Details
+    'Nominee_name': record.form_data?.Nominee_name || '',
+    'Nominee_Date_of_Birth': record.form_data?.Nominee_Date_of_Birth || '',
+    'Nominee_1_Name': record.form_data?.Nominee_1_Name || '',
+    'Nominee_2_Name': record.form_data?.Nominee_2_Name || '',
+    'Nominee_3_Name': record.form_data?.Nominee_3_Name || '',
+    'Relationship': record.form_data?.Relationship || '',
+    'Age_autocalculate': record.form_data?.Age_autocalculate || '',
 
     // Visa/Employment Details
-    'Visa_Number': '', // No direct mapping
-    'Sponsor/Company_Name': '', // No direct mapping
-    'Visa_Expiry_Date': '', // No direct mapping
+    'Visa_Number': record.form_data?.Visa_Number || '',
+    'Sponsor/Company_Name': record.form_data?.['Sponsor/Company_Name'] || '',
+    'Visa_Expiry_Date': record.form_data?.Visa_Expiry_Date || '',
     'Occupation': record.occupation || '',
+    'Current_Occupation': record.occupation || '',
 
-    // Additional Information from form_data JSON if available
-    ...(record.form_data && typeof record.form_data === 'object' ? record.form_data : {})
+    // Other fields
+    'Form_Collected_By': record.form_data?.Form_Collected_By || '',
+    'Uploaded_Copies': record.form_data?.Uploaded_Copies || '',
+    'Gender': record.gender || '',
+    'Place_of_Birth': record.place_of_birth || '',
+    'Current_Residence': record.form_data?.Current_Residence || '',
+    'Mobile_number_(IND)': record.alternate_phone || '',
+    'Percentage': record.form_data?.Percentage || ''
   };
+
+  // Merge with any additional form_data that might not be mapped
+  if (record.form_data && typeof record.form_data === 'object') {
+    Object.keys(record.form_data).forEach(key => {
+      // Only add if not already mapped
+      if (!mappedData[key]) {
+        mappedData[key] = record.form_data[key];
+      }
+    });
+  }
+
+  return mappedData;
 }

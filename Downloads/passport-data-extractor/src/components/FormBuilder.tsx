@@ -88,6 +88,53 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     });
   }, [formData]);
 
+  // Auto-load latest record when component mounts
+  useEffect(() => {
+    // Only auto-load if not in read-only mode and no initial data is provided
+    if (!isReadOnly && !initialData && Object.keys(initialValues).length === 0) {
+      // Auto-load the latest record
+      loadLatestRecordOnMount();
+    }
+  }, []); // Only run once on mount
+
+  // Function to auto-load latest record on mount
+  const loadLatestRecordOnMount = async () => {
+    console.log('Auto-loading latest record on mount...');
+
+    try {
+      const result = await getLatestPassportRecord();
+
+      if (result.success && result.data) {
+        // Map database fields to form fields
+        const mappedData = mapDatabaseRecordToFormFields(result.data);
+
+        // Update form values with mapped data
+        setFormValues(prev => ({
+          ...prev,
+          ...mappedData
+        }));
+
+        // Store the record ID for updating later
+        setCurrentRecordId(result.data.id || null);
+        setEditingDatabaseRecord(true);
+
+        // Show subtle success message
+        setSupabaseSaveStatus({
+          type: 'success',
+          message: `✓ Latest record loaded (ID: ${result.data.id?.substring(0, 8)}...)`
+        });
+
+        // Clear message after 3 seconds
+        setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
+      } else {
+        console.log('No records found to auto-load');
+      }
+    } catch (error) {
+      console.error('Error auto-loading latest record:', error);
+      // Don't show error message for auto-load failure
+    }
+  };
+
   const moveFieldUp = (index: number) => {
     if (index > 0) {
       const newFields = [...fields];

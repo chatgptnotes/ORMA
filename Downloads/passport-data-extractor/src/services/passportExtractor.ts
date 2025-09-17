@@ -33,6 +33,16 @@ export interface ExtractedPassportData {
   [key: string]: string | undefined;
 }
 
+export interface ValidationResult {
+  isValid: boolean;
+  documentType: 'passport' | 'emirates_id' | 'visa' | 'aadhar' | 'unknown';
+  missingFields: string[];
+  extractedFields: string[];
+  confidence: number;
+  message?: string;
+  suggestion?: string;
+}
+
 // Overloaded function signatures
 export async function extractPassportData(imageFile: File): Promise<ExtractedPassportData>;
 export async function extractPassportData(base64: string, mimeType: string): Promise<ExtractedPassportData>;
@@ -128,6 +138,29 @@ export async function extractPassportData(imageFileOrBase64: File | string, mime
                   `${cleanedData.surname} ${cleanedData.givenName}` : undefined),
       };
       
+      // Validate the extracted data
+      const validation = validateDocumentFields(extractedData);
+
+      if (!validation.isValid) {
+        console.warn('Document validation failed:', validation);
+
+        // Throw error with specific guidance
+        let errorMessage = 'Document validation failed. ';
+        if (validation.documentType === 'unknown') {
+          errorMessage += 'The uploaded document does not appear to be a valid passport, Emirates ID, visa, or Aadhar card. ';
+        } else {
+          errorMessage += `Detected document type: ${validation.documentType}. `;
+        }
+
+        if (validation.missingFields.length > 0) {
+          errorMessage += `Missing required fields: ${validation.missingFields.join(', ')}. `;
+        }
+
+        errorMessage += validation.suggestion || 'Please upload a clear image of the correct document page.';
+
+        throw new Error(errorMessage);
+      }
+
       // If we didn't extract much data, log the raw text for debugging
       if (Object.keys(extractedData).length < 3) {
         console.log('Limited data extracted. Raw text:', extractionResult.extractedText.substring(0, 500));
@@ -169,7 +202,7 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
   // Map passport fields to ORMA form fields (using actual generated field keys)
   const fieldMappings: { [key: string]: string[] } = {
     // Name fields - multiple possible field keys for each
-    fullName: ['Applicant_Full_Name_in_CAPITAL', 'Full_Name', 'Applicant_Full_Name'],
+    fullName: ['Applicant_Full_Name_in_CAPITAL', 'APPLICANT_NAME', 'Full_Name', 'Applicant_Full_Name'],
     surname: ['Last_Name', 'Surname'],
     givenName: ['First_Name', 'Given_Name'],
 
@@ -218,8 +251,14 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
           console.log(`Form has property "${mappedFieldName}": ${fieldExists}`);
           
           if (fieldExists) {
-            updatedFormData[mappedFieldName] = cleanValue;
-            console.log(`✅ SUCCESS: Mapped ${key} -> ${mappedFieldName}: "${cleanValue}"`);
+            // Special handling for fields that need to be in CAPITAL
+            if (mappedFieldName === 'Applicant_Full_Name_in_CAPITAL' || mappedFieldName === 'APPLICANT_NAME') {
+              updatedFormData[mappedFieldName] = cleanValue.toUpperCase();
+              console.log(`✅ SUCCESS: Mapped ${key} -> ${mappedFieldName}: "${cleanValue.toUpperCase()}" (converted to UPPERCASE)`);
+            } else {
+              updatedFormData[mappedFieldName] = cleanValue;
+              console.log(`✅ SUCCESS: Mapped ${key} -> ${mappedFieldName}: "${cleanValue}"`);
+            }
             fieldMapped = true;
             break; // Stop after first successful mapping
           }
@@ -276,4 +315,148 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
   
   console.log('Final mapped form data:', updatedFormData);
   return updatedFormData;
+}
+
+// Validate if the document contains expected fields based on document type
+export function validateDocumentFields(extractedData: ExtractedPassportData): ValidationResult {
+  const extractedFields = Object.keys(extractedData).filter(key => extractedData[key] && extractedData[key] !== '');
+
+  // Define required fields for each document type
+  const documentRequirements = {
+    passport: {
+      required: ['passportNumber', 'fullName', 'dateOfBirth', 'nationality'],
+      optional: ['surname', 'givenName', 'dateOfIssue', 'dateOfExpiry', 'placeOfBirth', 'placeOfIssue', 'gender'],
+      identifiers: ['passportNumber']
+    },
+    emirates_id: {
+      required: ['fullName', 'dateOfBirth', 'nationality'],
+      optional: ['idNumber', 'expiryDate', 'gender'],
+      identifiers: ['idNumber', 'emiratesId']
+    },
+    visa: {
+      required: ['fullName', 'passportNumber'],
+      optional: ['visaNumber', 'dateOfIssue', 'dateOfExpiry', 'visaType'],
+      identifiers: ['visaNumber', 'visaType']
+    },
+    aadhar: {
+      required: ['fullName', 'dateOfBirth'],
+      optional: ['aadharNumber', 'address', 'gender'],
+      identifiers: ['aadharNumber']
+    }
+  };
+
+  // Determine document type based on extracted fields
+  let documentType: 'passport' | 'emirates_id' | 'visa' | 'aadhar' | 'unknown' = 'unknown';
+  let maxScore = 0;
+  const minScoreThreshold = 10; // Minimum score to consider a document type
+
+  for (const [type, requirements] of Object.entries(documentRequirements)) {
+    const typeKey = type as keyof typeof documentRequirements;
+    let score = 0;
+
+    // Check for identifying fields
+    for (const identifier of requirements.identifiers) {
+      if (extractedFields.includes(identifier)) {
+        score += 10; // High weight for identifiers
+      }
+    }
+
+    // Check for required fields
+    for (const field of requirements.required) {
+      if (extractedFields.includes(field)) {
+        score += 5;
+      }
+    }
+
+    // Check for optional fields
+    for (const field of requirements.optional) {
+      if (extractedFields.includes(field)) {
+        score += 2;
+      }
+    }
+
+    if (score > maxScore && score >= minScoreThreshold) {
+      maxScore = score;
+      documentType = typeKey as any;
+    }
+  }
+
+  // Special check for passport number to ensure it's a passport
+  if (extractedData.passportNumber && extractedData.passportNumber.length > 5) {
+    documentType = 'passport';
+  }
+
+  // If we only have basic fields like name and address, it's likely not a valid document
+  if (maxScore < minScoreThreshold) {
+    documentType = 'unknown';
+  }
+
+  // Validate based on detected document type
+  let isValid = false;
+  let missingFields: string[] = [];
+  let confidence = 0;
+  let suggestion = '';
+
+  if (documentType !== 'unknown') {
+    const requirements = documentRequirements[documentType];
+    missingFields = requirements.required.filter(field => !extractedFields.includes(field));
+
+    // Calculate confidence based on extracted fields
+    const totalExpectedFields = requirements.required.length + requirements.optional.length;
+    const extractedRelevantFields = extractedFields.filter(field =>
+      requirements.required.includes(field) || requirements.optional.includes(field)
+    ).length;
+    confidence = extractedRelevantFields / totalExpectedFields;
+
+    // Document is valid if it has at least 75% of required fields
+    // For passport, we need at least 3 out of 4 required fields
+    isValid = missingFields.length < Math.ceil(requirements.required.length * 0.25);
+
+    // Generate suggestions based on document type and missing fields
+    if (!isValid) {
+      if (documentType === 'passport') {
+        if (missingFields.includes('passportNumber')) {
+          suggestion = '❌ Wrong Page: Please upload the main passport page with your photo and passport number (usually pages 1-2), not the address or visa pages.';
+        } else if (missingFields.includes('fullName')) {
+          suggestion = '⚠️ Poor Quality: The image quality may be poor or text is not readable. Please upload a clearer, well-lit photo of the passport data page.';
+        } else {
+          suggestion = '⚠️ Incomplete Data: Essential passport information is missing. Please upload the main passport page with photo and personal details.';
+        }
+      } else if (documentType === 'emirates_id') {
+        suggestion = '📋 Emirates ID: Please upload both front and back sides of the Emirates ID for complete information.';
+      } else if (documentType === 'visa') {
+        suggestion = '📋 Visa Page: Please upload the visa page with all visa details, stamps, and validity dates clearly visible.';
+      } else if (documentType === 'aadhar') {
+        suggestion = '📋 Aadhar Card: Please upload both front and back sides of the Aadhar card with all details clearly visible.';
+      }
+    }
+  } else {
+    // Unknown document type
+    isValid = false;
+    confidence = 0;
+    suggestion = '❌ Invalid Document: The uploaded image does not appear to be a valid passport, Emirates ID, visa, or Aadhar card.';
+
+    // Check if it might be the wrong page and provide specific guidance
+    if (extractedFields.length > 0) {
+      if (extractedFields.some(field => field.includes('address'))) {
+        suggestion = '❌ Wrong Page Uploaded: This appears to be the address/last page of passport. For passports, please upload the FIRST PAGE with your photo, passport number, and personal details.';
+      } else if (extractedFields.some(field => field.includes('stamp') || field.includes('visa'))) {
+        suggestion = '❌ Wrong Page Uploaded: This appears to be a visa/stamp page. Please upload the MAIN PASSPORT PAGE (pages 1-2) with your photo and passport number.';
+      } else if (extractedData.fullName && !extractedData.passportNumber) {
+        suggestion = '⚠️ Partial Information: Name detected but passport number is missing. Please ensure you upload the page with the passport number clearly visible.';
+      }
+    } else {
+      suggestion = '❌ No Valid Information Found: The image may be blurry, upside down, or not a valid document. Please ensure:\n• The document is clearly visible\n• Photo is well-lit and in focus\n• Upload the correct page (passport data page with photo)';
+    }
+  }
+
+  return {
+    isValid,
+    documentType,
+    missingFields,
+    extractedFields,
+    confidence,
+    message: isValid ? 'Document validated successfully' : 'Document validation failed',
+    suggestion
+  };
 }

@@ -138,8 +138,10 @@
 
 .data-item {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 0.75rem;
+  gap: 0.5rem;
 }
 
 .data-item:last-child {
@@ -148,9 +150,11 @@
 
 .data-label {
   color: #6b7280;
-  font-size: 0.8rem;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-right: 0.5rem;
+  min-width: fit-content;
+  text-align: left;
 }
 
 .data-value {
@@ -158,6 +162,8 @@
   font-size: 0.95rem;
   font-weight: 400;
   word-break: break-word;
+  text-align: left;
+  flex: 1;
 }
 
 /* Main form container */
@@ -660,4 +666,47 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Copy Button Styles */
+.simple-copy-btn {
+  transition: all 0.2s ease;
+}
+
+.simple-copy-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.simple-copy-btn:active {
+  transform: scale(0.95);
+}
+
+/* Paste Button Styles */
+.paste-btn {
+  transition: all 0.2s ease;
+}
+
+.paste-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced Data Item Styles for better visibility */
+.data-item {
+  transition: background-color 0.2s ease;
+  padding: 0.5rem;
+  border-radius: 6px;
+  margin: 0.25rem 0;
+}
+
+.data-item:hover {
+  background-color: rgba(102, 126, 234, 0.05);
+}
+
+/* Copy button container */
+.copy-button-group {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
 }

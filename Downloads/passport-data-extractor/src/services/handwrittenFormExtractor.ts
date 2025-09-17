@@ -85,6 +85,83 @@ export interface HandwrittenFormData {
   rawExtractedText?: string;
 }
 
+export interface HandwrittenFormValidation {
+  isValid: boolean;
+  missingFields: string[];
+  extractedFields: string[];
+  confidence: number;
+  message?: string;
+  suggestion?: string;
+}
+
+// Validate handwritten form data
+export function validateHandwrittenForm(data: HandwrittenFormData): HandwrittenFormValidation {
+  const requiredFields = [
+    'applicantName',
+    'dateOfBirth',
+    'permanentAddressKerala',
+    'uaePhoneNumber',
+    'nomineeName'
+  ];
+
+  const optionalFields = [
+    'email',
+    'mobileNumberNativePlace',
+    'aadharNumber',
+    'nroAccountNumber',
+    'ifscCode',
+    'district',
+    'taluk',
+    'village',
+    'fatherName',
+    'motherName',
+    'relationshipWithNominee'
+  ];
+
+  const extractedFields = Object.keys(data).filter(key =>
+    data[key as keyof HandwrittenFormData] &&
+    data[key as keyof HandwrittenFormData] !== '' &&
+    key !== 'rawExtractedText'
+  );
+
+  const missingFields = requiredFields.filter(field =>
+    !data[field as keyof HandwrittenFormData] ||
+    data[field as keyof HandwrittenFormData] === ''
+  );
+
+  // Calculate confidence
+  const totalFields = requiredFields.length + optionalFields.length;
+  const extractedRelevantFields = extractedFields.filter(field =>
+    requiredFields.includes(field) || optionalFields.includes(field)
+  ).length;
+  const confidence = extractedRelevantFields / totalFields;
+
+  // Valid if at least 60% of required fields are present
+  const isValid = missingFields.length <= Math.ceil(requiredFields.length * 0.4);
+
+  let suggestion = '';
+  if (!isValid) {
+    if (missingFields.includes('applicantName')) {
+      suggestion = 'The applicant name is not readable. Please ensure the handwritten form is filled clearly.';
+    } else if (missingFields.includes('nomineeName')) {
+      suggestion = 'Nominee information is missing. Please ensure all sections of the form are filled.';
+    } else if (missingFields.length > 3) {
+      suggestion = 'Multiple required fields are missing. Please upload a complete, clearly filled ORMA Kshemanidhi application form.';
+    } else {
+      suggestion = `Missing fields: ${missingFields.join(', ')}. Please ensure these sections are filled in the form.`;
+    }
+  }
+
+  return {
+    isValid,
+    missingFields,
+    extractedFields,
+    confidence,
+    message: isValid ? 'Handwritten form validated successfully' : 'Form validation failed',
+    suggestion
+  };
+}
+
 export async function extractHandwrittenFormData(imageFile: File): Promise<HandwrittenFormData> {
   try {
     // Convert file to base64
@@ -228,6 +305,24 @@ export async function extractHandwrittenFormData(imageFile: File): Promise<Handw
           extractedData[key] = "";
         }
       });
+
+      // Validate the extracted data
+      const validation = validateHandwrittenForm(extractedData);
+
+      if (!validation.isValid) {
+        console.warn('Handwritten form validation failed:', validation);
+
+        // Provide detailed error message
+        let errorMessage = 'Document validation failed. This does not appear to be a properly filled ORMA Kshemanidhi application form. ';
+
+        if (validation.missingFields.length > 0) {
+          errorMessage += `Missing required information: ${validation.missingFields.join(', ')}. `;
+        }
+
+        errorMessage += validation.suggestion || 'Please upload a complete, clearly filled ORMA form.';
+
+        throw new Error(errorMessage);
+      }
 
       return extractedData;
     }
