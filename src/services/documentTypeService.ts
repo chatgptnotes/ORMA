@@ -1,6 +1,7 @@
 import { ExtractedPassportData } from './passportExtractor';
 import { ExtractedEmiratesIdData, saveEmiratesIdRecord, updateEmiratesIdRecord, findEmiratesIdByNumber } from './emiratesIdRecordsService';
 import { ExtractedVisaData, saveVisaRecord, updateVisaRecord, findVisaByNumber } from './visaRecordsService';
+import { ExtractedAadharData, saveAadharRecord, updateAadharRecord, findAadharByNumber } from './aadharExtractor';
 import { savePassportData as savePassportRecordData, updatePassportData as updatePassportRecordData, findExistingRecordByPassport } from './passportRecordsService';
 
 // Unified document type enum
@@ -34,6 +35,7 @@ export interface DocumentStorageResult {
     passportRecordId?: string;
     emiratesIdRecordId?: string;
     visaRecordId?: string;
+    aadharRecordId?: string;
   };
 }
 
@@ -54,7 +56,11 @@ export function detectDocumentType(extractedData: ExtractedPassportData, pageTyp
     const normalizedPageType = pageType.toLowerCase();
     console.log('🎯 Using explicit pageType:', normalizedPageType);
     
-    if (normalizedPageType.includes('emirates') || normalizedPageType.includes('id')) {
+    if (normalizedPageType.includes('aadhar') || normalizedPageType.includes('aadhaar')) {
+      documentType = DocumentType.AADHAR;
+      confidence = 0.95;
+      suggestedAction = 'Store in Aadhaar records table';
+    } else if (normalizedPageType.includes('emirates') || normalizedPageType.includes('id')) {
       documentType = DocumentType.EMIRATES_ID;
       confidence = 0.95;
       suggestedAction = 'Store in Emirates ID records table';
@@ -88,7 +94,8 @@ export function detectDocumentType(extractedData: ExtractedPassportData, pageTyp
     const fieldScores = {
       [DocumentType.EMIRATES_ID]: 0,
       [DocumentType.VISA]: 0,
-      [DocumentType.PASSPORT]: 0
+      [DocumentType.PASSPORT]: 0,
+      [DocumentType.AADHAR]: 0
     };
 
     // Emirates ID indicators
@@ -154,6 +161,31 @@ export function detectDocumentType(extractedData: ExtractedPassportData, pageTyp
       }
     });
 
+    // Aadhaar card indicators
+    const aadharFields = ['aadharNumber', 'aadhar_number'];
+    const aadharKeywords = ['aadhaar', 'aadhar', 'government of india', 'unique identification', 'uidai'];
+
+    aadharFields.forEach(field => {
+      if (extractedData[field]) {
+        fieldScores[DocumentType.AADHAR] += 0.4;
+        console.log('✓ Aadhaar field found:', field);
+      }
+    });
+
+    aadharKeywords.forEach(keyword => {
+      if (allTextValues.includes(keyword)) {
+        fieldScores[DocumentType.AADHAR] += 0.2;
+        console.log('✓ Aadhaar keyword found:', keyword);
+      }
+    });
+
+    // Aadhaar number pattern (12 digits: XXXX XXXX XXXX or XXXXXXXXXXXX)
+    const aadharPattern = /\b\d{4}\s?\d{4}\s?\d{4}\b/;
+    if (aadharPattern.test(allTextValues)) {
+      fieldScores[DocumentType.AADHAR] += 0.4;
+      console.log('✓ Aadhaar number pattern detected');
+    }
+
     // Find the highest scoring document type
     const maxScore = Math.max(...Object.values(fieldScores));
     const detectedType = Object.keys(fieldScores).find(
@@ -174,6 +206,9 @@ export function detectDocumentType(extractedData: ExtractedPassportData, pageTyp
           break;
         case DocumentType.VISA:
           suggestedAction = 'Store in VISA records table';
+          break;
+        case DocumentType.AADHAR:
+          suggestedAction = 'Store in Aadhaar records table';
           break;
         case DocumentType.PASSPORT:
           suggestedAction = 'Store in passport records table';
@@ -431,6 +466,52 @@ export async function storeDocumentData(
         };
       }
 
+      case DocumentType.AADHAR: {
+        console.log('💾 Storing Aadhaar data');
+
+        // Convert extracted data to Aadhaar format
+        const aadharData: ExtractedAadharData = {
+          fullName: extractedData.fullName || (extractedData.givenName && extractedData.surname ?
+            `${extractedData.givenName} ${extractedData.surname}` : undefined),
+          dateOfBirth: extractedData.dateOfBirth,
+          gender: extractedData.gender,
+          aadharNumber: extractedData.aadharNumber,
+          address: extractedData.address,
+          pinCode: extractedData.pinCode,
+          district: extractedData.district,
+          state: extractedData.state
+        };
+
+        let recordId;
+        const pageType = documentType === DocumentType.AADHAR ? 'aadhar_combined' : 'aadhar_front';
+
+        if (existingRecordId) {
+          await updateAadharRecord(existingRecordId, aadharData, sourceFileName || 'unknown', 0.9, pageType);
+          recordId = existingRecordId;
+        } else {
+          // Check if Aadhaar already exists
+          if (aadharData.aadharNumber) {
+            const existing = await findAadharByNumber(aadharData.aadharNumber);
+            if (existing) {
+              await updateAadharRecord(existing.id, aadharData, sourceFileName || 'unknown', 0.9, pageType);
+              recordId = existing.id;
+            } else {
+              recordId = await saveAadharRecord(aadharData, sourceFileName || 'unknown', 0.9, pageType);
+            }
+          } else {
+            recordId = await saveAadharRecord(aadharData, sourceFileName || 'unknown', 0.9, pageType);
+          }
+        }
+
+        return {
+          success: true,
+          recordId: recordId,
+          documentType: DocumentType.AADHAR,
+          message: `Aadhaar data stored successfully - ID: ${recordId.substring(0, 8)}...`,
+          linkedRecords: { aadharRecordId: recordId }
+        };
+      }
+
       case DocumentType.PASSPORT:
       case DocumentType.PASSPORT_FRONT:
       case DocumentType.PASSPORT_BACK:
@@ -438,7 +519,7 @@ export async function storeDocumentData(
       case DocumentType.PASSPORT_LAST:
       default: {
         console.log('💾 Storing Passport data');
-        
+
         let record;
         if (existingRecordId) {
           record = await updatePassportRecordData(existingRecordId, extractedData);

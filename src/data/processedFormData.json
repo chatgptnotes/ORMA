@@ -154,12 +154,6 @@
         "inputType": "text"
       },
       {
-        "label": "Nominee Details Section",
-        "type": "Nominee Details ",
-        "comment": "Enter nominee information",
-        "inputType": "text"
-      },
-      {
         "label": "Nominee Date of Birth",
         "type": " Nominee name ",
         "comment": "DOB",

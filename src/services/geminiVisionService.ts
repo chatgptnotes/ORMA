@@ -115,9 +115,13 @@ async function preprocessImage(
 
         // Convert back to base64
         const processedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-        const processedBase64 = processedDataUrl.split(',')[1];
+        let processedBase64 = processedDataUrl.split(',')[1];
+
+        // Clean the base64 string - remove any whitespace or invalid characters
+        processedBase64 = processedBase64.replace(/\s/g, '').trim();
 
         console.log('Image preprocessing completed');
+        console.log('Processed base64 length:', processedBase64.length);
         return { base64: processedBase64, mimeType: 'image/jpeg' };
 
     } catch (error) {
@@ -141,27 +145,33 @@ export async function extractTextFromImage(
             throw new Error('Gemini API not configured. Please check your API key.');
         }
 
-        // Preprocess image if options are provided
+        // COMPLETELY DISABLE PREPROCESSING to avoid base64 corruption
+        // Use raw base64 directly
         let processedImage = { base64: base64Image, mimeType };
-        if (preprocessingOptions) {
-            console.log('Preprocessing image for better OCR...');
-            processedImage = await preprocessImage(base64Image, mimeType, {
-                enhanceContrast: true,
-                resizeForOCR: true,
-                denoiseImage: true,
-                maxWidth: 1920,
-                maxHeight: 1080,
-                ...preprocessingOptions
-            });
+
+        // Validate base64 data before sending to API
+        const cleanBase64 = processedImage.base64.replace(/\s/g, '').trim();
+
+        // Check if base64 is valid (should only contain A-Z, a-z, 0-9, +, /, and = for padding)
+        const base64Regex = /^[A-Za-z0-9+/]+=*$/;
+        if (!base64Regex.test(cleanBase64)) {
+            console.error('Invalid base64 string detected');
+            throw new Error('Invalid image data format. Please try uploading a different image.');
         }
 
-        // Get the vision model
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        if (cleanBase64.length === 0) {
+            throw new Error('Empty image data. Please upload a valid image file.');
+        }
 
-        // Prepare the image data
+        console.log('Base64 validation passed, length:', cleanBase64.length);
+
+        // Get the vision model - using gemini-2.5-flash (latest model)
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        // Prepare the image data with cleaned base64
         const imagePart = {
             inlineData: {
-                data: processedImage.base64,
+                data: cleanBase64,
                 mimeType: processedImage.mimeType
             }
         };
@@ -180,14 +190,23 @@ Please extract ALL text from this document image. This could be a PASSPORT, EMIR
 
 2. Document Identification:
    - PASSPORT NUMBER (format: Letter followed by 7-8 digits, e.g., A1234567)
+     * For PASSPORTS: Look for text labeled "Passport No.", "Passport Number", "पासपोर्ट संख्या", or similar
+     * Extract the value IMMEDIATELY AFTER this label
+     * IGNORE file numbers, reference numbers, application numbers, or other codes
    - EMIRATES ID NUMBER (format: XXX-YYYY-XXXXXXX-X, e.g., 784-1970-5109524-4)
    - VISA NUMBER (any alphanumeric visa identification)
    - Document type/authority
 
-3. Document Validity:
-   - Date of issue
-   - Date of expiry  
-   - Place of issue
+3. Document Validity (IMPORTANT - Read carefully):
+   - Date of issue:
+     * For PASSPORT: Extract from the main bio-data page (page with photo), labeled "Date of Issue" or "जारी करने की तिथि"
+     * IGNORE visa issue dates, stamp dates, or dates from visa pages
+   - Date of expiry:
+     * For PASSPORT: Extract from the main bio-data page, labeled "Date of Expiry" or "समाप्ति की तिथि"
+     * IGNORE visa expiry dates or stamp dates
+   - Place of issue:
+     * For PASSPORT: Extract from bio-data page, labeled "Place of Issue" or "जारी करने का स्थान"
+     * IGNORE visa issuance places (like "DUBAI", "ABU DHABI" from visa stamps)
    - Issuing authority
 
 4. Emirates ID Specific:
@@ -217,6 +236,43 @@ Please extract ALL text from this document image. This could be a PASSPORT, EMIR
    - Any machine-readable text at the bottom
    - OCR characters and codes
 
+CRITICAL INSTRUCTIONS FOR PASSPORT EXTRACTION:
+
+**PASSPORT NUMBER LOCATION AND IDENTIFICATION:**
+- LOCATION: The passport number is in the TOP RIGHT corner of the bio-data page (the page with the photo)
+- VISUAL APPEARANCE: It appears in LARGE TEXT, prominently displayed above or beside the passport holder's photograph
+- LABEL: Look for "Passport No." or "पासपोर्ट संख्या" near this large number
+- FORMAT: Letter + 7-8 digits (e.g., W0090302, L1234567, A9876543)
+
+**CONCRETE EXAMPLE:**
+- ✅ CORRECT: W0090302 (found in top right corner, large text, labeled "Passport No.")
+- ❌ WRONG: T8925844 (this is a file number, usually in smaller text elsewhere)
+
+**INDIAN PASSPORT FILE NUMBERS - EXTREMELY IMPORTANT:**
+- Indian passports contain file/application numbers starting with T, F, or R (e.g., T8925844, F1234567, R2345678)
+- These are NOT passport numbers - they are file reference numbers
+- NEVER extract T-prefix, F-prefix, or R-prefix numbers as passport numbers
+- Actual Indian passport numbers start with: A, E, G, H, J, K, L, M, P, S, U, V, W, Z (most common: W, L, A)
+- If you see both T8925844 and W0090302, choose W0090302 (the passport number in top right), NOT T8925844
+
+**EXTRACTION PRIORITY (follow this order):**
+1. Look for LARGE TEXT in the TOP RIGHT corner of the bio-data page
+2. Find the number near or above the passport photograph
+3. Verify it's labeled "Passport No." or "पासपोर्ट संख्या"
+4. Extract ONLY this number
+5. IGNORE numbers from visa pages, file reference sections, or application areas
+6. REJECT any number starting with T, F, or R (these are file numbers)
+- DATES: Extract ONLY the dates from the main bio-data page fields, NOT from visa stamps or entry/exit stamps
+  * Look for fields labeled "Date of Issue" and "Date of Expiry" on the main page with photo
+  * Visa stamps may show different dates (like 2020, 2022) - IGNORE these completely
+  * The passport issue date is usually several years before visa dates
+  * If you see multiple dates, choose the ones from the PAGE WITH THE PHOTO, not from visa pages
+- PLACE: Extract ONLY the "Place of Issue" from the bio-data page (e.g., "NEW DELHI", "MUMBAI", "BANGALORE", "CHENNAI")
+  * IGNORE places from visa stamps (like "DUBAI", "ABU DHABI", "SHARJAH", "AJMAN")
+  * UAE cities (DUBAI, ABU DHABI, SHARJAH) are NEVER passport issue places - they are visa places
+  * Visa issuance places are NOT the passport issue place
+  * Indian passports are issued from Indian cities only
+
 CRITICAL INSTRUCTIONS FOR EMIRATES ID EXTRACTION:
 - Emirates ID numbers ALWAYS follow pattern XXX-YYYY-XXXXXXX-X (e.g., 784-1970-5109524-4)
 - If you see ANY 15-digit number with hyphens (like 784-1970-5109524-4), put it in "emiratesIdNumber" field
@@ -238,7 +294,7 @@ Return the response in this JSON format:
     "firstNameArabic": "first name in Arabic if present",
     "lastNameArabic": "last name in Arabic if present",
     "dateOfBirth": "DD/MM/YYYY",
-    "passportNumber": "passport number (only if this is a passport, format: Letter+digits)",
+    "passportNumber": "CRITICAL: For PASSPORTS, extract ONLY the number after 'Passport No.' label (e.g., W0090302). IGNORE file numbers like T8925844. Format: Letter+7-8 digits",
     "emiratesIdNumber": "CRITICAL: Emirates ID number (any 15-digit number, format: XXX-YYYY-XXXXXXX-X like 784-1970-5109524-4 or 784197051095244)",
     "visaNumber": "VISA number (only if this is a VISA)",
     "visaType": "type of VISA if present",
@@ -246,9 +302,9 @@ Return the response in this JSON format:
     "nationality": "nationality",
     "gender": "M/F",
     "placeOfBirth": "place of birth",
-    "dateOfIssue": "DD/MM/YYYY",
-    "dateOfExpiry": "DD/MM/YYYY",
-    "placeOfIssue": "place of issue",
+    "dateOfIssue": "CRITICAL: For PASSPORTS, extract from bio-data page 'Date of Issue' field ONLY. IGNORE visa dates. Format: DD/MM/YYYY",
+    "dateOfExpiry": "CRITICAL: For PASSPORTS, extract from bio-data page 'Date of Expiry' field ONLY. IGNORE visa dates. Format: DD/MM/YYYY",
+    "placeOfIssue": "CRITICAL: For PASSPORTS, extract from bio-data page 'Place of Issue' field (e.g., NEW DELHI). IGNORE visa places like DUBAI",
     "emiratesResidence": "emirate of residence if Emirates ID",
     "areaCode": "area code if present",
     "portOfEntry": "port of entry if VISA",
@@ -275,6 +331,9 @@ Return the response in this JSON format:
 
         const processingTime = Date.now() - startTime;
         console.log(`Gemini Vision API response received in ${processingTime}ms`);
+        console.log('🔍 RAW GEMINI RESPONSE (first 500 chars):', text.substring(0, 500));
+        console.log('🔍 RAW GEMINI RESPONSE (last 500 chars):', text.substring(Math.max(0, text.length - 500)));
+        console.log('🔍 FULL GEMINI RESPONSE LENGTH:', text.length);
 
         return {
             extractedText: text,
@@ -285,10 +344,27 @@ Return the response in this JSON format:
     } catch (error) {
         const processingTime = Date.now() - startTime;
         console.error('Error extracting text from image:', error);
-        
-        // Return a fallback response with error information
+
+        // Provide more specific error messages
+        let errorMessage = 'Unknown error';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+
+            // Check for specific error types
+            if (errorMessage.includes('invalid base64')) {
+                errorMessage = 'Invalid image format. The image data is corrupted. Please try a different image or take a new photo.';
+            } else if (errorMessage.includes('400') || errorMessage.includes('Bad Request')) {
+                errorMessage = 'Bad request to AI service. Please ensure the image is a valid JPG or PNG file.';
+            } else if (errorMessage.includes('403') || errorMessage.includes('API key')) {
+                errorMessage = 'API key error. Please check your Gemini API configuration.';
+            } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
+                errorMessage = 'API quota exceeded. Please try again later.';
+            }
+        }
+
+        // Return a fallback response with detailed error
         return {
-            extractedText: `Error extracting text: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            extractedText: `Error extracting text: ${errorMessage}`,
             confidence: 0,
             processingTime
         };

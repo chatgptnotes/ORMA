@@ -63,7 +63,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
   const [extractedText, setExtractedText] = useState<string>('');
   const [lastPDFName, setLastPDFName] = useState<string>('');
   const [fields, setFields] = useState<FormField[]>(formData?.inputForm?.fields || []);
-  const [supabaseSaveStatus, setSupabaseSaveStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+  const [supabaseSaveStatus, setSupabaseSaveStatus] = useState<{ type: 'success' | 'error' | 'warning' | null; message: string }>({ type: null, message: '' });
   const [currentRecordId, setCurrentRecordId] = useState<string | null>(() => {
     // Initialize from session storage if available
     return sessionStorage.getItem('passport_record_id') || null;
@@ -150,14 +150,15 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     });
   }, [formData]);
 
-  // Auto-load latest record when component mounts
-  useEffect(() => {
-    // Only auto-load if not in read-only mode and no initial data is provided
-    if (!isReadOnly && !initialData && Object.keys(initialValues).length === 0) {
-      // Auto-load the latest record
-      loadLatestRecordOnMount();
-    }
-  }, []); // Only run once on mount
+  // DISABLED: Auto-load latest record when component mounts
+  // User should manually click "Load Latest Record" button to fetch data from database
+  // useEffect(() => {
+  //   // Only auto-load if not in read-only mode and no initial data is provided
+  //   if (!isReadOnly && !initialData && Object.keys(initialValues).length === 0) {
+  //     // Auto-load the latest record
+  //     loadLatestRecordOnMount();
+  //   }
+  // }, []); // Only run once on mount
 
   // Handle form clearing when clearFormTrigger changes
   useEffect(() => {
@@ -197,6 +198,20 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       console.log('FormBuilder: Cleared form values:', clearedFormValues);
     }
   }, [clearFormTrigger, fields]);
+
+  // Watch for changes to initialData and update form values
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0) {
+      console.log('FormBuilder: initialData changed, updating form values:', initialData);
+
+      setFormValues(prev => {
+        // Merge initialData with existing values, prioritizing initialData
+        const updated = { ...prev, ...initialData };
+        console.log('FormBuilder: Updated form values with initialData:', updated);
+        return updated;
+      });
+    }
+  }, [initialData]);
 
   // Fresh database fetch and form population for real-time updates
   const fetchAndPopulateForm = async (pageType: string) => {
@@ -362,7 +377,14 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     console.log('🔥 handlePassportUpload called with:');
     console.log('   📁 file:', file.name);
     console.log('   🏷️ pageType:', pageType);
-    
+
+    // Clear cached record ID and editing state for fresh upload
+    // This prevents old database data from interfering with new extraction
+    sessionStorage.removeItem('passport_record_id');
+    setCurrentRecordId(null);
+    setEditingDatabaseRecord(false);
+    console.log('🧹 Cleared cached record ID for fresh upload');
+
     setIsExtracting({ ...isExtracting, [pageType]: true });
     setExtractionError(null);
     setSupabaseSaveStatus({ type: null, message: '' });
@@ -449,23 +471,19 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           console.error('❌ Failed to store document data:', storageResult.message);
         }
         
-        // Step 3: Fetch fresh data and populate form (only for passport documents)
-        if (storageResult.documentType.toString().includes('passport')) {
-          await fetchAndPopulateForm(pageType);
-        } else {
-          // For non-passport documents, populate form with extracted data directly
-          console.log('🔍 NON-PASSPORT DOCUMENT: Populating form directly');
-          console.log('🔍 Original extractedData:', extractedData);
-          const populatedData = mapPassportToFormFields(extractedData, formValues);
-          console.log('🔍 After mapPassportToFormFields:', populatedData);
-          console.log('🔍 Looking for Emirates ID in populatedData:');
-          Object.entries(populatedData).forEach(([key, value]) => {
-            if (typeof value === 'string' && /\b\d{3}-\d{4}-\d{7}-\d{1}\b/.test(value)) {
-              console.log(`  🆔 FOUND EMIRATES ID in populatedData field "${key}":`, value);
-            }
-          });
-          setFormValues(populatedData);
-        }
+        // Step 3: Populate form with FRESH extracted data (not from database)
+        // This ensures newly uploaded documents use fresh extraction, not cached/old database data
+        console.log('✅ Using FRESH extraction data, not database');
+        console.log('🔍 Original extractedData:', extractedData);
+        const populatedData = mapPassportToFormFields(extractedData, formValues, storageResult.documentType.toString());
+        console.log('🔍 After mapPassportToFormFields:', populatedData);
+        console.log('🔍 Looking for Emirates ID in populatedData:');
+        Object.entries(populatedData).forEach(([key, value]) => {
+          if (typeof value === 'string' && /\b\d{3}-\d{4}-\d{7}-\d{1}\b/.test(value)) {
+            console.log(`  🆔 FOUND EMIRATES ID in populatedData field "${key}":`, value);
+          }
+        });
+        setFormValues(populatedData);
         
         // Clear status after 5 seconds
         setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 5000);
@@ -631,7 +649,9 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         );
 
         // Also update form values
-        const mappedData = mapPassportToFormFields(editedPassportData, formValues);
+        // Get document type from the active document, default to 'passport'
+        const docType = extractedDocuments[activeDocumentTab]?.type || 'passport';
+        const mappedData = mapPassportToFormFields(editedPassportData, formValues, docType);
         setFormValues(mappedData);
 
         // Show success message
@@ -774,6 +794,28 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             const handwrittenData = await extractHandwrittenFormData(file);
             console.log('Extracted handwritten form data:', handwrittenData);
 
+            // Check for extraction warnings or failures
+            if (handwrittenData._extractionFailed) {
+              console.warn('⚠️ Handwritten form extraction failed:', handwrittenData._errorMessage);
+              setSupabaseSaveStatus({
+                type: 'warning',
+                message: `⚠️ Could not extract handwritten form: ${handwrittenData._errorMessage}. You can still fill the form manually.`
+              });
+            } else if (handwrittenData._validationWarning) {
+              console.warn('⚠️ Handwritten form validation warning:', handwrittenData._validationMessage);
+              console.warn('   Suggestion:', handwrittenData._validationSuggestion);
+              console.warn('   Confidence:', Math.round((handwrittenData._confidence || 0) * 100) + '%');
+              setSupabaseSaveStatus({
+                type: 'warning',
+                message: `⚠️ Partial extraction (${Math.round((handwrittenData._confidence || 0) * 100)}% confidence). ${handwrittenData._validationSuggestion || 'Some fields may need manual entry.'}`
+              });
+            } else {
+              setSupabaseSaveStatus({
+                type: 'success',
+                message: '✅ Handwritten form extracted successfully!'
+              });
+            }
+
             // Map to form fields
             mappedData = mapHandwrittenToFormFields(handwrittenData);
             extractedData = handwrittenData;
@@ -781,7 +823,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             // Extract passport data
             extractedData = await extractPassportData(file, 'file'); // Default to 'file' for general uploads
             console.log('Extracted passport data:', extractedData);
-            mappedData = mapPassportToFormFields(extractedData, formValues);
+            mappedData = mapPassportToFormFields(extractedData, formValues, 'passport');
           }
 
           // Store extracted data in the documents array for file uploads
@@ -849,7 +891,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           // Use appropriate mapping function based on document type
           const mappedFormData = isHandwrittenField
             ? { ...currentFormValues, ...mappedData } // mappedData already computed above
-            : mapPassportToFormFields(extractedData, currentFormValues);
+            : mapPassportToFormFields(extractedData, currentFormValues, 'passport');
           console.log('Mapped data to form fields:', mappedFormData);
           console.log('Sample mapped values:', {
             First_Name: mappedFormData['First_Name'],
@@ -868,41 +910,51 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           });
           setIsExtracting({ ...isExtracting, [fieldKey]: false });
         } catch (error) {
-          console.error('Error extracting data:', error);
+          console.error('❌ Error extracting data:', error);
           const errorMessage = error instanceof Error ? error.message : 'Failed to extract data';
-          setExtractionError(errorMessage);
 
-          // Show validation error in status message
-          setSupabaseSaveStatus({
-            type: 'error',
-            message: errorMessage
-          });
+          // Determine if this is a critical error or just a warning
+          const isCriticalError = !isHandwrittenField; // Only treat passport extraction errors as critical
 
-          // Clean up the uploaded file since it's invalid
-          if (uploadedFilesData[fieldKey]?.preview) {
-            URL.revokeObjectURL(uploadedFilesData[fieldKey].preview);
+          if (isCriticalError) {
+            setExtractionError(errorMessage);
+            setSupabaseSaveStatus({
+              type: 'error',
+              message: `❌ ${errorMessage}`
+            });
+
+            // Clean up the uploaded file for critical errors only
+            if (uploadedFilesData[fieldKey]?.preview) {
+              URL.revokeObjectURL(uploadedFilesData[fieldKey].preview);
+            }
+
+            setUploadedFilesData(prev => {
+              const newData = { ...prev };
+              delete newData[fieldKey];
+              return newData;
+            });
+
+            setUploadedFiles(prev => {
+              const newFiles = { ...prev };
+              delete newFiles[fieldKey];
+              return newFiles;
+            });
+
+            setUploadedFilesPreviews(prev => {
+              const newPreviews = { ...prev };
+              delete newPreviews[fieldKey];
+              return newPreviews;
+            });
+
+            handleChange(fieldKey, '');
+          } else {
+            // For handwritten form errors, just show a warning but keep the file
+            console.warn('⚠️ Handwritten form extraction error (non-critical):', errorMessage);
+            setSupabaseSaveStatus({
+              type: 'warning',
+              message: `⚠️ ${errorMessage}. The form can still be filled manually.`
+            });
           }
-
-          setUploadedFilesData(prev => {
-            const newData = { ...prev };
-            delete newData[fieldKey];
-            return newData;
-          });
-
-          setUploadedFiles(prev => {
-            const newFiles = { ...prev };
-            delete newFiles[fieldKey];
-            return newFiles;
-          });
-
-          setUploadedFilesPreviews(prev => {
-            const newPreviews = { ...prev };
-            delete newPreviews[fieldKey];
-            return newPreviews;
-          });
-
-          // Clear form value
-          handleChange(fieldKey, '');
 
           setIsExtracting({ ...isExtracting, [fieldKey]: false });
         }
@@ -1797,7 +1849,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                         const currentDoc = extractedDocuments[activeDocumentTab];
                         if (currentDoc && currentDoc.data) {
                           // Use the mapPassportToFormFields function to map the data
-                          const mappedData = mapPassportToFormFields(currentDoc.data, formValues);
+                          const docType = currentDoc.type || currentDoc.pageType || 'passport';
+                          const mappedData = mapPassportToFormFields(currentDoc.data, formValues, docType);
 
                           // Check how many fields were actually mapped
                           const mappedFieldsCount = Object.keys(mappedData).filter(
@@ -2526,71 +2579,133 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         </div>
         
         <div className="upload-grid">
-          {/* Front Page Upload */}
+          {/* Passport Upload - Combined Front and Address */}
           <div className="upload-card">
             <h4>📘 Passport First Page</h4>
-            <input
-              type="file"
-              id="passport-front"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handlePassportUpload(file, 'front');
-                }
-              }}
-              disabled={isExtracting.front}
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="passport-front" className={`upload-btn ${isExtracting.front ? 'disabled' : ''} ${uploadedFiles.front ? 'uploaded' : ''}`}>
-              {isExtracting.front ? (
-                <>
-                  <span className="spinner"></span>
-                  Extracting...
-                </>
-              ) : uploadedFiles.front ? (
-                <>✅ {uploadedFiles.front.name}</>
-              ) : (
-                <>📷 Upload Front</>
-              )}
-            </label>
-          </div>
-
-          {/* Back Page Upload */}
-          <div className="upload-card">
-            <h4>📗 Passport last/address Page</h4>
-            <input
-              type="file"
-              id="passport-back"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handlePassportUpload(file, 'address');
-                }
-              }}
-              disabled={isExtracting.address}
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="passport-back" className={`upload-btn ${isExtracting.address ? 'disabled' : ''} ${uploadedFiles.address ? 'uploaded' : ''}`}>
-              {isExtracting.address ? (
-                <>
-                  <span className="spinner"></span>
-                  Extracting...
-                </>
-              ) : uploadedFiles.address ? (
-                <>✅ {uploadedFiles.address.name}</>
-              ) : (
-                <>📷 Upload Address Page</>
-              )}
-            </label>
-          </div>
-
-          {/* Visa/Stamp Page Upload */}
-          <div className="upload-card">
-            <h4>📙 Emirates ID or VISA</h4>
             <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
               {/* Front Upload */}
+              <input
+                type="file"
+                id="passport-front"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'front');
+                  }
+                }}
+                disabled={isExtracting.front}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="passport-front" className={`upload-btn ${isExtracting.front ? 'disabled' : ''} ${uploadedFiles.front ? 'uploaded' : ''}`}>
+                {isExtracting.front ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.front ? (
+                  <>✅ Front</>
+                ) : (
+                  <>📷 Front</>
+                )}
+              </label>
+
+              {/* Address Page Upload */}
+              <input
+                type="file"
+                id="passport-back"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'address');
+                  }
+                }}
+                disabled={isExtracting.address}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="passport-back" className={`upload-btn ${isExtracting.address ? 'disabled' : ''} ${uploadedFiles.address ? 'uploaded' : ''}`}>
+                {isExtracting.address ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.address ? (
+                  <>✅ Back</>
+                ) : (
+                  <>📷 Back</>
+                )}
+              </label>
+            </div>
+          </div>
+
+          {/* Passport last/address Page card - REMOVED, now combined above */}
+
+          {/* Emirates ID Upload - Separate Card */}
+          <div className="upload-card">
+            <h4>🆔 Emirates ID</h4>
+            <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+              {/* Emirates ID Front Upload */}
+              <input
+                type="file"
+                id="emirates-id-front"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'emirates_id_front');
+                  }
+                }}
+                disabled={isExtracting.emirates_id_front}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="emirates-id-front" className={`upload-btn ${isExtracting.emirates_id_front ? 'disabled' : ''} ${uploadedFiles.emirates_id_front ? 'uploaded' : ''}`}>
+                {isExtracting.emirates_id_front ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.emirates_id_front ? (
+                  <>✅ Front</>
+                ) : (
+                  <>📷 Front</>
+                )}
+              </label>
+
+              {/* Emirates ID Back Upload */}
+              <input
+                type="file"
+                id="emirates-id-back"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'emirates_id_back');
+                  }
+                }}
+                disabled={isExtracting.emirates_id_back}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="emirates-id-back" className={`upload-btn ${isExtracting.emirates_id_back ? 'disabled' : ''} ${uploadedFiles.emirates_id_back ? 'uploaded' : ''}`}>
+                {isExtracting.emirates_id_back ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.emirates_id_back ? (
+                  <>✅ Back</>
+                ) : (
+                  <>📷 Back</>
+                )}
+              </label>
+            </div>
+          </div>
+
+          {/* VISA Upload - Separate Card */}
+          <div className="upload-card">
+            <h4>📋 VISA</h4>
+            <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+              {/* VISA Front Upload */}
               <input
                 type="file"
                 id="visa-front"
@@ -2598,7 +2713,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    handlePassportUpload(file, 'emirates_id');
+                    handlePassportUpload(file, 'visa_front');
                   }
                 }}
                 disabled={isExtracting.visa_front}
@@ -2611,13 +2726,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                     Extracting...
                   </>
                 ) : uploadedFiles.visa_front ? (
-                  <>✅ Emirates ID</>
+                  <>✅ Front</>
                 ) : (
-                  <>🆔 Emirates ID</>
+                  <>📷 Front</>
                 )}
               </label>
 
-              {/* Back Upload */}
+              {/* VISA Back Upload */}
               <input
                 type="file"
                 id="visa-back"
@@ -2625,7 +2740,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    handlePassportUpload(file, 'visa');
+                    handlePassportUpload(file, 'visa_back');
                   }
                 }}
                 disabled={isExtracting.visa_back}
@@ -2638,9 +2753,9 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                     Extracting...
                   </>
                 ) : uploadedFiles.visa_back ? (
-                  <>✅ VISA</>
+                  <>✅ Back</>
                 ) : (
-                  <>📋 VISA</>
+                  <>📷 Back</>
                 )}
               </label>
             </div>
@@ -2753,13 +2868,16 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             fontWeight: '500'
           }}>
             <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>
-              ⚠️ Document Validation Failed
+              ❌ Critical Error
             </div>
             <div>{extractionError}</div>
+            <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', opacity: 0.8 }}>
+              Please re-upload a valid document or contact support.
+            </div>
           </div>
         )}
-        
-        {Object.keys(uploadedFiles).length > 0 && !extractionError && (
+
+        {Object.keys(uploadedFiles).length > 0 && (
           <div className="extraction-success">
             ✅ {Object.keys(uploadedFiles).length} document(s) processed successfully!
           </div>

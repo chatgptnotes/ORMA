@@ -657,6 +657,12 @@
   color: #742a2a;
 }
 
+.status-message.warning {
+  background: rgba(237, 137, 54, 0.1);
+  border: 1px solid rgba(237, 137, 54, 0.3);
+  color: #7c2d12;
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;

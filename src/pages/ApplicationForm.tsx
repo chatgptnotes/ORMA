@@ -46,57 +46,58 @@ const ApplicationForm: React.FC = () => {
     navigate('/dashboard');
   };
 
-  // Auto-load passport data on component mount
-  useEffect(() => {
-    const loadPassportData = async () => {
-      try {
-        setIsLoadingPassportData(true);
-        setAutoFillError(null);
-        
-        // Get count of passport records
-        const count = await getPassportRecordCount();
-        setPassportRecordCount(count);
-        
-        // Auto-load latest passport data if available
-        if (count > 0) {
-          console.log('Found', count, 'passport records, loading latest...');
-          const latestRecord = await fetchLatestPassportRecord();
-          
-          if (latestRecord) {
-            setLatestPassportRecord(latestRecord);
-            const mappedFormData = mapPassportRecordToFormFields(latestRecord);
-            setFormFieldData(mappedFormData);
-            setShowAutoFillSuccess(true);
-            console.log('Auto-filled form with latest passport data');
-            
-            // Auto-hide success message after 5 seconds
-            setTimeout(() => setShowAutoFillSuccess(false), 5000);
-          }
-        } else {
-          console.log('No passport records found for auto-fill');
-        }
-      } catch (error) {
-        console.error('Error loading passport data:', error);
-        let errorMessage = 'Failed to load passport data';
-        if (error instanceof Error) {
-          if (error.message.includes('schema cache')) {
-            errorMessage = 'Database schema mismatch. Please check if database columns match the application requirements.';
-          } else if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
-            errorMessage = 'Network connection error. Please check your internet connection and try again.';
-          } else if (error.message.includes('Database error')) {
-            errorMessage = 'Database connection error. Please verify your database configuration.';
-          } else {
-            errorMessage = `Failed to load passport data: ${error.message}`;
-          }
-        }
-        setAutoFillError(errorMessage);
-      } finally {
-        setIsLoadingPassportData(false);
-      }
-    };
-
-    loadPassportData();
-  }, []);
+  // DISABLED: Auto-load passport data on component mount
+  // User should manually click the refresh button to load data from database
+  // useEffect(() => {
+  //   const loadPassportData = async () => {
+  //     try {
+  //       setIsLoadingPassportData(true);
+  //       setAutoFillError(null);
+  //
+  //       // Get count of passport records
+  //       const count = await getPassportRecordCount();
+  //       setPassportRecordCount(count);
+  //
+  //       // Auto-load latest passport data if available
+  //       if (count > 0) {
+  //         console.log('Found', count, 'passport records, loading latest...');
+  //         const latestRecord = await fetchLatestPassportRecord();
+  //
+  //         if (latestRecord) {
+  //           setLatestPassportRecord(latestRecord);
+  //           const mappedFormData = mapPassportRecordToFormFields(latestRecord);
+  //           setFormFieldData(mappedFormData);
+  //           setShowAutoFillSuccess(true);
+  //           console.log('Auto-filled form with latest passport data');
+  //
+  //           // Auto-hide success message after 5 seconds
+  //           setTimeout(() => setShowAutoFillSuccess(false), 5000);
+  //         }
+  //       } else {
+  //         console.log('No passport records found for auto-fill');
+  //       }
+  //     } catch (error) {
+  //       console.error('Error loading passport data:', error);
+  //       let errorMessage = 'Failed to load passport data';
+  //       if (error instanceof Error) {
+  //         if (error.message.includes('schema cache')) {
+  //           errorMessage = 'Database schema mismatch. Please check if database columns match the application requirements.';
+  //         } else if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
+  //           errorMessage = 'Network connection error. Please check your internet connection and try again.';
+  //         } else if (error.message.includes('Database error')) {
+  //           errorMessage = 'Database connection error. Please verify your database configuration.';
+  //         } else {
+  //           errorMessage = `Failed to load passport data: ${error.message}`;
+  //         }
+  //       }
+  //       setAutoFillError(errorMessage);
+  //     } finally {
+  //       setIsLoadingPassportData(false);
+  //     }
+  //   };
+  //
+  //   loadPassportData();
+  // }, []);
 
   // Manual refresh passport data
   const handleRefreshPassportData = async () => {

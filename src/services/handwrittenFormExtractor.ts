@@ -2,7 +2,39 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }); // Using gemini-2.5-flash (latest model)
+
+// Helper function to convert DD/MM/YYYY to YYYY-MM-DD for HTML date inputs
+const convertDateFormat = (dateStr: string | undefined): string | undefined => {
+  if (!dateStr) return undefined;
+
+  // Check if already in YYYY-MM-DD format
+  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    console.log('📅 Date already in YYYY-MM-DD format:', dateStr);
+    return dateStr;
+  }
+
+  // Convert DD/MM/YYYY to YYYY-MM-DD
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const [, day, month, year] = ddmmyyyyMatch;
+    const converted = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    console.log('📅 Converted DD/MM/YYYY to YYYY-MM-DD:', dateStr, '→', converted);
+    return converted;
+  }
+
+  // Try DD-MM-YYYY format
+  const ddmmyyyyDashMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddmmyyyyDashMatch) {
+    const [, day, month, year] = ddmmyyyyDashMatch;
+    const converted = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    console.log('📅 Converted DD-MM-YYYY to YYYY-MM-DD:', dateStr, '→', converted);
+    return converted;
+  }
+
+  console.log('📅 Date format not recognized, returning as-is:', dateStr);
+  return dateStr; // Return as-is if format not recognized
+};
 
 export interface HandwrittenFormData {
   // Personal Information
@@ -57,6 +89,7 @@ export interface HandwrittenFormData {
 
   // Nominee Information
   nomineeName?: string;
+  nomineeDateOfBirth?: string;
   relationshipWithNominee?: string;
   nomineeCurrentPlace?: string;
   isNomineeWorking?: string;
@@ -202,12 +235,40 @@ export async function extractHandwrittenFormData(imageFile: File): Promise<Handw
        - Branch
 
     6. Identity Documents:
-       - Aadhar Number
+       - Aadhar Number (ആധാർ നമ്പർ)
        - PAN Number (if present)
        - Voter ID Number (if present)
 
+    CRITICAL INSTRUCTIONS FOR AADHAAR NUMBER EXTRACTION:
+
+    **AADHAAR NUMBER IDENTIFICATION:**
+    - LABEL: Look for "Aadhaar Number" or "ആധാർ നമ്പർ" (Malayalam) or "Aadhar" or "Adhaar"
+    - FORMAT: EXACTLY 12 digits (e.g., 570721544490, 123456789012)
+    - APPEARANCE: May be handwritten or printed, often in a dedicated field/box
+    - SPACING: May appear with spaces (5707 2154 4490) but extract as continuous 12 digits
+
+    **CRITICAL DIFFERENTIATION:**
+    - ✅ AADHAAR: 12 digits (570721544490) → Extract this as aadharNumber
+    - ❌ PHONE: 10 digits (9847123215) → This is a phone number, NOT Aadhaar
+    - Phone numbers in India are typically 10 digits starting with 6-9
+    - Aadhaar numbers are ALWAYS 12 digits and can start with any digit
+
+    **CONCRETE EXAMPLES:**
+    - ✅ CORRECT Aadhaar: 570721544490 (12 digits)
+    - ✅ CORRECT Aadhaar: 5707 2154 4490 (extract as 570721544490)
+    - ❌ WRONG: 9847123215 (10 digits - this is a phone number)
+    - ❌ WRONG: 0558115576 (10 digits - this is a phone number)
+
+    **EXTRACTION PRIORITY FOR AADHAAR:**
+    1. Look for dedicated Aadhaar field with label "Aadhaar" or "ആധാർ നമ്പർ"
+    2. Count the digits - MUST be exactly 12 digits
+    3. Extract the complete 12-digit number, removing any spaces
+    4. DO NOT extract 10-digit phone numbers as Aadhaar
+    5. If you see both 10-digit and 12-digit numbers, the 12-digit is likely the Aadhaar
+
     7. Nominee Information:
        - Nominee Name
+       - Nominee Date of Birth (നോമിനിയുടെ ജന്മതിയതി)
        - Relationship with Nominee
        - Current place of Nominee
        - Is Nominee working? (Yes/No)
@@ -265,6 +326,7 @@ export async function extractHandwrittenFormData(imageFile: File): Promise<Handw
       "panNumber": "PAN number",
       "voterIdNumber": "voter ID",
       "nomineeName": "nominee name",
+      "nomineeDateOfBirth": "nominee date of birth (DD/MM/YYYY)",
       "relationshipWithNominee": "relationship with nominee",
       "nomineeCurrentPlace": "current place of nominee",
       "isNomineeWorking": "Yes/No",
@@ -296,6 +358,7 @@ export async function extractHandwrittenFormData(imageFile: File): Promise<Handw
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const extractedData = JSON.parse(jsonMatch[0]);
+      console.log('📥 RAW Gemini extraction result:', JSON.stringify(extractedData, null, 2));
 
       // Clean up the data - remove "Not Available" values
       Object.keys(extractedData).forEach(key => {
@@ -306,31 +369,139 @@ export async function extractHandwrittenFormData(imageFile: File): Promise<Handw
         }
       });
 
+      // Convert dates from DD/MM/YYYY to YYYY-MM-DD for HTML date inputs
+      console.log('📅 Converting dates in admin form...');
+      if (extractedData.dateOfBirth) {
+        const converted = convertDateFormat(extractedData.dateOfBirth);
+        if (converted) {
+          console.log('📅 Converted dateOfBirth:', extractedData.dateOfBirth, '→', converted);
+          extractedData.dateOfBirth = converted;
+        }
+      }
+
+      if (extractedData.nomineeDateOfBirth) {
+        const converted = convertDateFormat(extractedData.nomineeDateOfBirth);
+        if (converted) {
+          console.log('📅 Converted nomineeDateOfBirth:', extractedData.nomineeDateOfBirth, '→', converted);
+          extractedData.nomineeDateOfBirth = converted;
+        }
+      }
+
+      // Detect Aadhaar numbers misidentified as phone numbers
+      // Aadhaar is 12 digits, phone numbers are typically 10 digits
+      const aadhaarPattern = /^\d{12}$/;
+      console.log('🔧 Checking for Aadhaar number misidentification...');
+      console.log('🔍 Current Aadhaar value before pattern detection:', extractedData.aadharNumber || 'EMPTY');
+
+      // Check alternate phone for Aadhaar pattern
+      if (extractedData.alternatePhone) {
+        const cleaned = extractedData.alternatePhone.replace(/\s/g, '');
+        if (aadhaarPattern.test(cleaned)) {
+          console.log('🔧 DETECTED: Alternate phone is actually Aadhaar number:', extractedData.alternatePhone);
+          if (!extractedData.aadharNumber) {
+            extractedData.aadharNumber = cleaned;
+            extractedData.alternatePhone = "";
+            console.log('🔧 MOVED: 12-digit number from alternatePhone to aadharNumber');
+          }
+        }
+      }
+
+      // Check mobile number native place for Aadhaar pattern
+      if (extractedData.mobileNumberNativePlace) {
+        const cleaned = extractedData.mobileNumberNativePlace.replace(/\s/g, '');
+        if (aadhaarPattern.test(cleaned)) {
+          console.log('🔧 DETECTED: Mobile number native place is actually Aadhaar number:', extractedData.mobileNumberNativePlace);
+          if (!extractedData.aadharNumber) {
+            extractedData.aadharNumber = cleaned;
+            extractedData.mobileNumberNativePlace = "";
+            console.log('🔧 MOVED: 12-digit number from mobileNumberNativePlace to aadharNumber');
+          }
+        }
+      }
+
+      // Check any other phone field for Aadhaar pattern
+      if (extractedData.mobileNumber) {
+        const cleaned = extractedData.mobileNumber.replace(/\s/g, '');
+        if (aadhaarPattern.test(cleaned)) {
+          console.log('🔧 DETECTED: Mobile number is actually Aadhaar number:', extractedData.mobileNumber);
+          if (!extractedData.aadharNumber) {
+            extractedData.aadharNumber = cleaned;
+            extractedData.mobileNumber = "";
+            console.log('🔧 MOVED: 12-digit number from mobileNumber to aadharNumber');
+          }
+        }
+      }
+
+      console.log('🔍 Final Aadhaar value after pattern detection:', extractedData.aadharNumber || 'EMPTY');
+
+      // Validate Aadhaar number format
+      console.log('🔧 Validating Aadhaar number format...');
+      if (extractedData.aadharNumber) {
+        const cleanedAadhaar = extractedData.aadharNumber.replace(/[\s-]/g, '');
+        console.log('🔍 Original Aadhaar:', extractedData.aadharNumber);
+        console.log('🔍 Cleaned Aadhaar:', cleanedAadhaar);
+
+        if (/^\d{12}$/.test(cleanedAadhaar)) {
+          extractedData.aadharNumber = cleanedAadhaar;
+          console.log('✅ Valid Aadhaar number (12 digits):', cleanedAadhaar);
+        } else {
+          console.log('❌ INVALID Aadhaar number - not 12 digits:', cleanedAadhaar, '(length:', cleanedAadhaar.length, ')');
+          console.log('🔧 Clearing invalid Aadhaar field');
+          extractedData.aadharNumber = "";
+        }
+      } else {
+        console.log('⚠️ No Aadhaar number extracted by Gemini');
+      }
+
+      console.log('✅ Date conversion and Aadhaar validation complete');
+      console.log('📤 FINAL extracted data being returned:', {
+        aadharNumber: extractedData.aadharNumber || 'EMPTY',
+        alternatePhone: extractedData.alternatePhone || 'EMPTY',
+        mobileNumberNativePlace: extractedData.mobileNumberNativePlace || 'EMPTY',
+        applicantName: extractedData.applicantName || 'EMPTY',
+        nomineeDateOfBirth: extractedData.nomineeDateOfBirth || 'EMPTY'
+      });
+
       // Validate the extracted data
       const validation = validateHandwrittenForm(extractedData);
 
       if (!validation.isValid) {
-        console.warn('Handwritten form validation failed:', validation);
+        console.warn('⚠️ Handwritten form validation warning:', validation);
+        console.warn(`⚠️ Extracted ${validation.extractedFields.length} fields with ${Math.round(validation.confidence * 100)}% confidence`);
+        console.warn(`⚠️ Missing fields: ${validation.missingFields.join(', ')}`);
 
-        // Provide detailed error message
-        let errorMessage = 'Document validation failed. This does not appear to be a properly filled ORMA Kshemanidhi application form. ';
-
-        if (validation.missingFields.length > 0) {
-          errorMessage += `Missing required information: ${validation.missingFields.join(', ')}. `;
-        }
-
-        errorMessage += validation.suggestion || 'Please upload a complete, clearly filled ORMA form.';
-
-        throw new Error(errorMessage);
+        // Instead of throwing an error, return the partial data with a warning flag
+        return {
+          ...extractedData,
+          _validationWarning: true,
+          _validationMessage: validation.message,
+          _validationSuggestion: validation.suggestion,
+          _missingFields: validation.missingFields,
+          _confidence: validation.confidence
+        };
       }
 
       return extractedData;
     }
 
-    return { rawExtractedText: text };
+    console.warn('⚠️ Could not parse JSON from handwritten form response');
+    return {
+      rawExtractedText: text,
+      _extractionWarning: true,
+      _extractionMessage: 'Partial extraction - could not parse complete form data'
+    };
   } catch (error) {
-    console.error('Error extracting handwritten form data:', error);
-    throw new Error('Failed to extract handwritten form data');
+    console.error('❌ Error extracting handwritten form data:', error);
+
+    // Return a partial result instead of throwing
+    // This allows the form to continue working even if handwritten extraction fails
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return {
+      _extractionFailed: true,
+      _errorMessage: errorMessage,
+      rawExtractedText: 'Extraction failed: ' + errorMessage
+    };
   }
 }
 
@@ -345,159 +516,161 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 // Map handwritten form data to standard form fields
+// Maps all 21 Admin Form fields as per FIELD_TO_DOCUMENT_MAPPING_TEMPLATE.md
 export function mapHandwrittenToFormFields(handwrittenData: HandwrittenFormData): Record<string, any> {
   const mappedData: Record<string, any> = {};
 
-  // Map personal information
-  const name = handwrittenData.applicantName || handwrittenData.fullName;
-  if (name) {
-    mappedData['Applicant_Full_Name_in_CAPITAL'] = name.toUpperCase();
-    mappedData['Full_Name'] = name;
-    mappedData['Applicant_Full_Name'] = name;
+  console.log('=== MAPPING ADMIN FORM DATA ===');
+  console.log('Handwritten data:', handwrittenData);
 
-    // Try to split into given name and surname
-    const nameParts = name.split(' ');
-    if (nameParts.length > 1) {
-      mappedData['First_Name'] = nameParts[0];
-      mappedData['Given_Name'] = nameParts.slice(0, -1).join(' ');
-      mappedData['Last_Name'] = nameParts[nameParts.length - 1];
-      mappedData['Surname'] = nameParts[nameParts.length - 1];
-    }
+  // NOTE: Name fields (Applicant Full Name, First Name, Middle Name, Last Name)
+  // should ONLY come from Passport Front, NOT from Admin Form
+  // Admin Form provides only fields #10-22, #24, #39-40, #44-45
+
+  // ========== ADMIN FORM FIELDS (21 total) ==========
+  // Based on FIELD_TO_DOCUMENT_MAPPING_TEMPLATE.md
+
+  // Field #10: UAE Mobile Number
+  if (handwrittenData.uaePhoneNumber || handwrittenData.mobileNumber) {
+    const uaeNumber = handwrittenData.uaePhoneNumber || handwrittenData.mobileNumber;
+    mappedData['UAE_Mobile_Number'] = uaeNumber;
+    mappedData['Mobile_Number'] = uaeNumber;
+    console.log('✅ Mapped Field #10 - UAE Mobile Number:', uaeNumber);
   }
 
-  if (handwrittenData.dateOfBirth) {
-    mappedData['Date_of_Birth'] = handwrittenData.dateOfBirth;
-  }
-
-  if (handwrittenData.gender) {
-    mappedData['Gender'] = handwrittenData.gender;
-  }
-
-  // Map contact information
-  if (handwrittenData.uaePhoneNumber) {
-    mappedData['UAE_Phone_Number'] = handwrittenData.uaePhoneNumber;
-    mappedData['Mobile_Number'] = handwrittenData.uaePhoneNumber;
-  }
-
+  // Field #11: WhatsApp Number
   if (handwrittenData.whatsappNumber) {
     mappedData['WhatsApp_Number'] = handwrittenData.whatsappNumber;
+    console.log('✅ Mapped Field #11 - WhatsApp Number:', handwrittenData.whatsappNumber);
   }
 
-  if (handwrittenData.mobileNumberNativePlace) {
-    mappedData['Mobile_Number_in_Native_Place'] = handwrittenData.mobileNumberNativePlace;
-    mappedData['Contact_Number'] = handwrittenData.mobileNumberNativePlace;
-  }
-
+  // Field #14: Email ID
   if (handwrittenData.email) {
+    mappedData['Email_ID'] = handwrittenData.email;
     mappedData['Email'] = handwrittenData.email;
     mappedData['Email_Address'] = handwrittenData.email;
+    console.log('✅ Mapped Field #14 - Email ID:', handwrittenData.email);
   }
 
-  // Map Kerala address information
-  if (handwrittenData.permanentAddressKerala || handwrittenData.permanentAddress) {
-    const address = handwrittenData.permanentAddressKerala || handwrittenData.permanentAddress;
-    mappedData['Permanent_Residence_Address'] = address;
-    mappedData['Address_in_Kerala'] = address;
-    mappedData['Address'] = address;
+  // Field #15: Indian Active Mobile Number
+  if (handwrittenData.mobileNumberNativePlace || handwrittenData.alternatePhone) {
+    const indianNumber = handwrittenData.mobileNumberNativePlace || handwrittenData.alternatePhone;
+    mappedData['Indian_Active_Mobile_Number'] = indianNumber;
+    mappedData['Mobile_Number_in_Native_Place'] = indianNumber;
+    mappedData['Contact_Number'] = indianNumber;
+    console.log('✅ Mapped Field #15 - Indian Active Mobile Number:', indianNumber);
   }
 
-  if (handwrittenData.pinCode) {
-    mappedData['PIN_Code'] = handwrittenData.pinCode;
-    mappedData['Pincode'] = handwrittenData.pinCode;
+  // Field #16: Local Body Type (Panchayath/Municipality/Corporation)
+  if (handwrittenData.panchayath || handwrittenData.municipality || handwrittenData.corporation) {
+    let localBodyType = '';
+    if (handwrittenData.panchayath) localBodyType = 'Panchayath';
+    else if (handwrittenData.municipality) localBodyType = 'Municipality';
+    else if (handwrittenData.corporation) localBodyType = 'Corporation';
+
+    mappedData['Local_Body_Type'] = localBodyType;
+    console.log('✅ Mapped Field #16 - Local Body Type:', localBodyType);
   }
 
+  // Field #17: Taluk
   if (handwrittenData.taluk) {
     mappedData['Taluk'] = handwrittenData.taluk;
+    console.log('✅ Mapped Field #17 - Taluk:', handwrittenData.taluk);
   }
 
+  // Field #18: Village
   if (handwrittenData.village) {
     mappedData['Village'] = handwrittenData.village;
+    console.log('✅ Mapped Field #18 - Village:', handwrittenData.village);
   }
 
-  if (handwrittenData.panchayath) {
-    mappedData['Panchayath_Municipality_Corporation'] = handwrittenData.panchayath;
+  // Field #19: Local Body Name
+  const localBodyName = handwrittenData.panchayath || handwrittenData.municipality || handwrittenData.corporation;
+  if (localBodyName) {
+    mappedData['Local_Body_Name'] = localBodyName;
+    mappedData['Name_of_Panchayath/Municipality/Corporation'] = localBodyName;
+    console.log('✅ Mapped Field #19 - Local Body Name:', localBodyName);
   }
 
+  // Field #20: District
   if (handwrittenData.district) {
     mappedData['District'] = handwrittenData.district;
+    console.log('✅ Mapped Field #20 - District:', handwrittenData.district);
   }
 
-  // Map abroad address
+  // Field #21: Current Residence Address (Abroad)
   if (handwrittenData.abroadAddress || handwrittenData.currentAddress) {
     const abroadAddr = handwrittenData.abroadAddress || handwrittenData.currentAddress;
+    mappedData['Current_Residence_Address_(Abroad)'] = abroadAddr;
+    mappedData['Abroad_Current_Residence_address'] = abroadAddr;
     mappedData['Current_Residence_Address'] = abroadAddr;
-    mappedData['Abroad_Address'] = abroadAddr;
+    console.log('✅ Mapped Field #21 - Current Residence Address (Abroad):', abroadAddr);
   }
 
-  // Map banking information
-  if (handwrittenData.nroAccountNumber) {
-    mappedData['NRO_Account_Number'] = handwrittenData.nroAccountNumber;
-  }
-
-  if (handwrittenData.ifscCode) {
-    mappedData['IFSC_Code'] = handwrittenData.ifscCode;
-  }
-
-  if (handwrittenData.branchName) {
-    mappedData['Branch_Name'] = handwrittenData.branchName;
-  }
-
-  // Map nominee information
-  if (handwrittenData.nomineeName) {
-    mappedData['Nominee_Name'] = handwrittenData.nomineeName;
-  }
-
-  if (handwrittenData.relationshipWithNominee) {
-    mappedData['Relationship_with_Nominee'] = handwrittenData.relationshipWithNominee;
-  }
-
-  if (handwrittenData.nomineeCurrentPlace) {
-    mappedData['Nominee_Current_Place'] = handwrittenData.nomineeCurrentPlace;
-  }
-
-  if (handwrittenData.isNomineeWorking) {
-    mappedData['Is_Nominee_Working'] = handwrittenData.isNomineeWorking;
-  }
-
-  if (handwrittenData.nomineeMobileNumber) {
-    mappedData['Nominee_Mobile_Number'] = handwrittenData.nomineeMobileNumber;
-  }
-
-  // Map family information
-  if (handwrittenData.fatherName) {
-    mappedData['Father/Guardian_Name'] = handwrittenData.fatherName;
-    mappedData['Father_Name'] = handwrittenData.fatherName;
-  }
-
-  if (handwrittenData.motherName) {
-    mappedData['Mother_Name'] = handwrittenData.motherName;
-  }
-
-  if (handwrittenData.spouseName) {
-    mappedData['Spouse_Name'] = handwrittenData.spouseName;
-  }
-
-  // Map identity information
+  // Field #22: Aadhaar Number
   if (handwrittenData.aadharNumber) {
+    mappedData['Aadhaar_Number'] = handwrittenData.aadharNumber;
     mappedData['Aadhar_Number'] = handwrittenData.aadharNumber;
+    mappedData['Aadhar_number'] = handwrittenData.aadharNumber;
+    console.log('✅ Mapped Field #22 - Aadhaar Number:', handwrittenData.aadharNumber);
   }
 
-  if (handwrittenData.panNumber) {
-    mappedData['PAN_Number'] = handwrittenData.panNumber;
+  // Field #23: Nominee Date of Birth (from Admin Form, fallback to Aadhaar Front)
+  // Note: Aadhaar fallback will be handled in the main form builder
+  if (handwrittenData.nomineeDateOfBirth) {
+    mappedData['Nominee_Date_of_Birth'] = handwrittenData.nomineeDateOfBirth;
+    console.log('✅ Mapped Field #23 - Nominee Date of Birth:', handwrittenData.nomineeDateOfBirth);
   }
 
-  // Map additional information
-  if (handwrittenData.personCollectingForm) {
-    mappedData['Name_of_Person_collecting_this_Form'] = handwrittenData.personCollectingForm;
+  // Field #24: Nominee 1 Name
+  if (handwrittenData.nomineeName) {
+    mappedData['Nominee_1_Name'] = handwrittenData.nomineeName;
+    mappedData['Nominee_Name'] = handwrittenData.nomineeName;
+    console.log('✅ Mapped Field #24 - Nominee 1 Name:', handwrittenData.nomineeName);
   }
 
-  if (handwrittenData.submissionDate) {
-    mappedData['Date'] = handwrittenData.submissionDate;
+  // Field #39: Nominee name (duplicate/same as #24)
+  if (handwrittenData.nomineeName) {
+    mappedData['Nominee_name'] = handwrittenData.nomineeName;
+    console.log('✅ Mapped Field #39 - Nominee name:', handwrittenData.nomineeName);
   }
 
-  // Add metadata
-  mappedData['Document_Type'] = 'Handwritten Form';
-  mappedData['Form_Type'] = handwrittenData.formType || 'ORMA Kshemanidhi Application';
+  // Field #40: Relationship
+  if (handwrittenData.relationshipWithNominee) {
+    mappedData['Relationship'] = handwrittenData.relationshipWithNominee;
+    mappedData['Relationship_with_Nominee'] = handwrittenData.relationshipWithNominee;
+    console.log('✅ Mapped Field #40 - Relationship:', handwrittenData.relationshipWithNominee);
+  }
+
+  // Field #44: Current Residence
+  if (handwrittenData.currentAddress || handwrittenData.abroadAddress) {
+    const currentRes = handwrittenData.currentAddress || handwrittenData.abroadAddress;
+    mappedData['Current_Residence'] = currentRes;
+    console.log('✅ Mapped Field #44 - Current Residence:', currentRes);
+  }
+
+  // Field #45: Mobile number (IND)
+  if (handwrittenData.mobileNumberNativePlace || handwrittenData.nomineeMobileNumber) {
+    const indMobile = handwrittenData.mobileNumberNativePlace || handwrittenData.nomineeMobileNumber;
+    mappedData['Mobile_number_(IND)'] = indMobile;
+    mappedData['Mobile_Number_(IND)'] = indMobile;
+    console.log('✅ Mapped Field #45 - Mobile number (IND):', indMobile);
+  }
+
+  console.log('📊 Total Admin Form fields mapped:', Object.keys(mappedData).length);
+
+  // NOTE: The following fields should NOT be mapped from Admin Form:
+  // - Permanent Residence Address (Field #12) → Passport Back only
+  // - PIN Code (Field #13) → Passport Back only
+  // - Father/Guardian Name (Field #38) → Passport Back only
+  // - Form Collected By (Field #27) → Manual Entry only
+  // - Banking information → Not in the 46-field mapping
+  // - Nominee mobile/family info → Not in the 46-field mapping or already mapped
+  // - PAN Number → Not in the 46-field mapping
+  // - Submission Date → Not in the 46-field mapping
+
+  // ========== END OF ADMIN FORM MAPPING ==========
+  // Admin Form should only map 21 fields as specified in FIELD_TO_DOCUMENT_MAPPING_TEMPLATE.md
 
   return mappedData;
 }
