@@ -15,7 +15,7 @@ const fileToBase64 = (file: File): Promise<string> => {
     });
 };
 
-// Helper function to convert DD/MM/YYYY to YYYY-MM-DD for HTML date inputs
+// Helper function to convert various date formats to YYYY-MM-DD for HTML date inputs
 const convertDateFormat = (dateStr: string | undefined): string | undefined => {
   if (!dateStr) return undefined;
 
@@ -32,6 +32,23 @@ const convertDateFormat = (dateStr: string | undefined): string | undefined => {
     const converted = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     console.log('📅 Converted DD/MM/YYYY to YYYY-MM-DD:', dateStr, '→', converted);
     return converted;
+  }
+
+  // Convert DDMMMYYYY format (e.g., 23JAN2034, 05MAR2025) - common in VISA documents
+  const monthMap: { [key: string]: string } = {
+    'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAY': '05', 'JUN': '06',
+    'JUL': '07', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+  };
+
+  const ddmmmyyyyMatch = dateStr.match(/^(\d{1,2})([A-Z]{3})(\d{4})$/i);
+  if (ddmmmyyyyMatch) {
+    const [, day, monthName, year] = ddmmmyyyyMatch;
+    const month = monthMap[monthName.toUpperCase()];
+    if (month) {
+      const converted = `${year}-${month}-${day.padStart(2, '0')}`;
+      console.log('📅 Converted DDMMMYYYY to YYYY-MM-DD:', dateStr, '→', converted);
+      return converted;
+    }
   }
 
   console.log('📅 Date format not recognized, returning as-is:', dateStr);
@@ -77,9 +94,10 @@ export interface ExtractedPassportData {
   visaType?: string;
   visaCategory?: string;
   visaClass?: string;
+  visaIssueDate?: string;  // When visa was issued
   validFromDate?: string;
   validUntilDate?: string;
-  visaExpiryDate?: string;
+  visaExpiryDate?: string;  // When visa expires (Field #31)
   durationOfStay?: string;
   portOfEntry?: string;
   purposeOfVisit?: string;
@@ -87,7 +105,11 @@ export interface ExtractedPassportData {
   issuingCountry?: string;
   issuingAuthority?: string;
   issuingLocation?: string;
+  issuingPostName?: string;  // Where visa was issued (e.g., FRANKFURT)
   entriesAllowed?: string;
+  entries?: string;  // Entries annotation (e.g., M for multiple)
+  annotation?: string;  // Any annotation text on visa
+  controlNumber?: string;  // USA visa control number (maps to visaNumber)
 
   // Calculated/parsed fields
   age?: string;
@@ -463,6 +485,14 @@ export async function extractPassportData(imageFileOrBase64: File | string, mime
         }
       }
 
+      if (extractedData.visaIssueDate) {
+        const converted = convertDateFormat(extractedData.visaIssueDate);
+        if (converted) {
+          console.log('📅 Converted visaIssueDate:', extractedData.visaIssueDate, '→', converted);
+          extractedData.visaIssueDate = converted;
+        }
+      }
+
       if (extractedData.visaExpiryDate) {
         const converted = convertDateFormat(extractedData.visaExpiryDate);
         if (converted) {
@@ -524,9 +554,20 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
 
   console.log('=== STARTING FIELD MAPPING ===');
   console.log('Document Type:', documentType);
-  console.log('Mapping passport data:', passportData);
-  console.log('Current form data keys:', Object.keys(formData));
-  console.log('Form data sample:', Object.keys(formData).slice(0, 10));
+  console.log('Form data keys count:', Object.keys(formData).length);
+
+  // Debug: Check if visa fields exist in formData
+  console.log('🔍 Searching for VISA-related fields in formData...');
+  const visaRelatedKeys = Object.keys(formData).filter(key =>
+    key.toLowerCase().includes('visa')
+  );
+  console.log('🔍 Found VISA-related keys:', visaRelatedKeys);
+  console.log('🔍 Checking specific keys:', {
+    'Visa_Number': formData.hasOwnProperty('Visa_Number'),
+    'Visa_Expiry_Date': formData.hasOwnProperty('Visa_Expiry_Date'),
+    'VISA_Number': formData.hasOwnProperty('VISA_Number'),
+    'VISA_Expiry_Date': formData.hasOwnProperty('VISA_Expiry_Date')
+  });
 
   // ========== NAME PARSING LOGIC ==========
   // Always parse full name if we have it to get proper first/middle/last names
@@ -646,15 +687,21 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
     areaCode: ['Area_Code'],
 
     // ========== VISA SPECIFIC ==========
-    // Field #29: Visa Number - VISA
-    visaNumber: ['VISA_Number', 'Visa_No', 'Visa_Number'],
+    // Field #29: Visa Number - VISA (includes Control Number for USA visas)
+    visaNumber: ['Visa_Number', 'VISA_Number', 'Visa_No', 'Control_Number'],
+    controlNumber: ['Visa_Number', 'VISA_Number', 'Control_Number'], // USA visa control number
 
     // Field #31: Visa Expiry Date - VISA
     visaExpiryDate: ['Visa_Expiry_Date', 'VISA_Expiry_Date'],
 
+    visaIssueDate: ['Visa_Issue_Date', 'VISA_Issue_Date'], // When visa was issued
     visaType: ['VISA_Type', 'Visa_Type'],
+    visaClass: ['Visa_Type_/_Class', 'Visa_Class', 'VISA_Class'], // e.g., B1/B2
     visaCategory: ['VISA_Category'],
     validUntilDate: ['Visa_Expiry_Date', 'VISA_Expiry_Date'],
+    issuingPostName: ['Issuing_Post_Name', 'VISA_Issuing_Post'], // Where visa was issued (e.g., FRANKFURT)
+    entries: ['Entries', 'Entries/Annotation'], // e.g., M for multiple
+    annotation: ['Annotation', 'VISA_Annotation'], // Annotation text on visa
     portOfEntry: ['Port_of_Entry'],
     purposeOfVisit: ['Purpose_of_Visit'],
 
@@ -690,15 +737,33 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
     percentage: ['Percentage'],
   };
   
-  console.log('Available form field keys:', Object.keys(formData));
-  console.log('Field mappings being used:', fieldMappings);
 
   // ========== DOCUMENT TYPE FILTERING ==========
   // Define which fields belong to which document type to prevent conflicts
-  const passportOnlyFields = ['passportNumber', 'dateOfIssue', 'dateOfExpiry', 'placeOfIssue', 'placeOfBirth', 'fatherName', 'motherName', 'spouseName', 'address', 'permanentAddress', 'pinCode'];
+  // Based on FIELD_TO_DOCUMENT_MAPPING_TEMPLATE.md
+
+  // Passport ONLY fields - should NOT be filled from VISA or Emirates ID
+  // Fields #6-9, #33-38, #41: Name fields, passport details, DOB - all from Passport Front ONLY
+  // Field #12-13, #38: Address, PIN, Father name - from Passport Back ONLY
+  const passportOnlyFields = [
+    // Name fields - Passport Front ONLY (Fields #6-9, #37/#41)
+    'fullName', 'givenName', 'middleName', 'surname', 'dateOfBirth',
+    // Passport details - Passport Front ONLY (Fields #33-36)
+    'passportNumber', 'dateOfIssue', 'dateOfExpiry', 'placeOfIssue', 'placeOfBirth',
+    // Family & Address - Passport Back ONLY (Fields #12-13, #38)
+    'fatherName', 'motherName', 'spouseName', 'address', 'permanentAddress', 'pinCode'
+  ];
+
   const emiratesOnlyFields = ['emiratesIdNumber', 'fullNameArabic', 'firstNameEnglish', 'lastNameEnglish', 'firstNameArabic', 'lastNameArabic', 'emiratesResidence', 'areaCode', 'occupation'];
-  const visaOnlyFields = ['visaNumber', 'visaExpiryDate', 'visaType', 'visaCategory', 'validUntilDate', 'portOfEntry', 'purposeOfVisit', 'sponsorInformation', 'durationOfStay', 'entriesAllowed', 'issuingCountry'];
-  const sharedFields = ['fullName', 'givenName', 'middleName', 'surname', 'dateOfBirth', 'age', 'gender']; // Can be from any document
+  const visaOnlyFields = [
+    'visaNumber', 'controlNumber', 'visaExpiryDate', 'visaIssueDate', 'visaType', 'visaClass', 'visaCategory',
+    'validUntilDate', 'issuingPostName', 'entries', 'annotation', 'portOfEntry', 'purposeOfVisit',
+    'sponsorInformation', 'durationOfStay', 'entriesAllowed', 'issuingCountry'
+  ];
+
+  // Shared fields that can come from any document
+  // Field #42: Age is auto-calculated
+  const sharedFields = ['age', 'gender', 'nationality']; // Only these can be from any document
 
   // Normalize document type for checking
   const docType = documentType.toLowerCase();
@@ -707,24 +772,37 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
   const isVisa = docType.includes('visa');
 
   console.log(`📋 Document Type Filter: isPassport=${isPassport}, isEmiratesID=${isEmiratesID}, isVisa=${isVisa}`);
+  console.log(`📋 Original documentType param: "${documentType}" → normalized: "${docType}"`);
+
+  // Debug: Show what will be filtered
+  console.log(`🔍 Field Filtering Rules:`);
+  console.log(`  - Passport-only fields will ${isPassport ? 'BE MAPPED' : 'BE SKIPPED (not a passport)'}`);
+  console.log(`  - VISA-only fields will ${isVisa ? 'BE MAPPED' : 'BE SKIPPED (not a visa)'}`);
+  console.log(`  - Emirates-only fields will ${isEmiratesID ? 'BE MAPPED' : 'BE SKIPPED (not Emirates ID)'}`);
+
+  // Debug: Show VISA-specific extracted data
+  console.log('🔍 VISA-specific extracted data:');
+  console.log('  - visaNumber:', passportData.visaNumber || 'NOT EXTRACTED');
+  console.log('  - controlNumber:', passportData.controlNumber || 'NOT EXTRACTED');
+  console.log('  - visaExpiryDate:', passportData.visaExpiryDate || 'NOT EXTRACTED');
+  console.log('  - visaIssueDate:', passportData.visaIssueDate || 'NOT EXTRACTED');
+  console.log('  - visaType:', passportData.visaType || 'NOT EXTRACTED');
+  console.log('  - visaClass:', passportData.visaClass || 'NOT EXTRACTED');
+  console.log('  - issuingPostName:', passportData.issuingPostName || 'NOT EXTRACTED');
 
   // Apply field mappings
   Object.entries(passportData).forEach(([key, value]) => {
     if (value && typeof value === 'string' && value.trim()) {
       const cleanValue = value.toString().trim();
-      console.log(`\nProcessing passport field: ${key} = "${cleanValue}"`);
 
       // ========== DOCUMENT TYPE FILTERING CHECK ==========
       // Skip fields that don't belong to this document type
       let shouldSkip = false;
       if (passportOnlyFields.includes(key) && !isPassport) {
-        console.log(`⏭️ SKIP: Field "${key}" is passport-only, but document type is "${documentType}"`);
         shouldSkip = true;
       } else if (emiratesOnlyFields.includes(key) && !isEmiratesID) {
-        console.log(`⏭️ SKIP: Field "${key}" is Emirates ID-only, but document type is "${documentType}"`);
         shouldSkip = true;
       } else if (visaOnlyFields.includes(key) && !isVisa) {
-        console.log(`⏭️ SKIP: Field "${key}" is VISA-only, but document type is "${documentType}"`);
         shouldSkip = true;
       }
 
@@ -734,40 +812,32 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
 
       // Direct field mapping - now handles array of possible field names
       const mappedFieldNames = fieldMappings[key];
-      console.log(`Looking for mapped field names: ${mappedFieldNames}`);
-      
+
       if (mappedFieldNames && Array.isArray(mappedFieldNames)) {
         // Try each possible field name
         let fieldMapped = false;
         for (const mappedFieldName of mappedFieldNames) {
-          console.log(`Checking if form has field: ${mappedFieldName}`);
-          
           // Check both the mapped field name and the field without special characters
-          const fieldExists = updatedFormData.hasOwnProperty(mappedFieldName) || 
+          const fieldExists = updatedFormData.hasOwnProperty(mappedFieldName) ||
                             Object.keys(updatedFormData).some(k => k === mappedFieldName);
-          
-          console.log(`Form has property "${mappedFieldName}": ${fieldExists}`);
           
           if (fieldExists) {
             let valueToMap = cleanValue;
 
             // Convert date fields from DD/MM/YYYY to YYYY-MM-DD for HTML date inputs
             if (key === 'dateOfIssue' || key === 'dateOfExpiry' || key === 'dateOfBirth' ||
-                key === 'nomineeDateOfBirth' || key === 'visaExpiryDate' || key === 'validFromDate' || key === 'validUntilDate') {
+                key === 'nomineeDateOfBirth' || key === 'visaIssueDate' || key === 'visaExpiryDate' || key === 'validFromDate' || key === 'validUntilDate') {
               const converted = convertDateFormat(cleanValue);
               if (converted && converted !== cleanValue) {
                 valueToMap = converted;
-                console.log(`📅 Date converted for ${key}: ${cleanValue} → ${valueToMap}`);
               }
             }
 
             // Special handling for fields that need to be in CAPITAL
             if (mappedFieldName === 'Applicant_Full_Name_in_CAPITAL' || mappedFieldName === 'APPLICANT_NAME') {
               updatedFormData[mappedFieldName] = valueToMap.toUpperCase();
-              console.log(`✅ SUCCESS: Mapped ${key} -> ${mappedFieldName}: "${valueToMap.toUpperCase()}" (converted to UPPERCASE)`);
             } else {
               updatedFormData[mappedFieldName] = valueToMap;
-              console.log(`✅ SUCCESS: Mapped ${key} -> ${mappedFieldName}: "${valueToMap}"`);
             }
             fieldMapped = true;
             break; // Stop after first successful mapping
@@ -775,8 +845,7 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
         }
         
         if (!fieldMapped) {
-          console.log(`❌ FAILED: None of ${mappedFieldNames} found in form data`);
-          console.log(`Available form fields:`, Object.keys(updatedFormData));
+          console.log(`❌ NO MATCH: Could not find form field for ${key}`);
           
           // Try to find a similar field with different formatting
           const similarField = Object.keys(updatedFormData).find(k => {
@@ -792,20 +861,17 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
 
             // Convert date fields from DD/MM/YYYY to YYYY-MM-DD for HTML date inputs
             if (key === 'dateOfIssue' || key === 'dateOfExpiry' || key === 'dateOfBirth' ||
-                key === 'nomineeDateOfBirth' || key === 'visaExpiryDate' || key === 'validFromDate' || key === 'validUntilDate') {
+                key === 'nomineeDateOfBirth' || key === 'visaIssueDate' || key === 'visaExpiryDate' || key === 'validFromDate' || key === 'validUntilDate') {
               const converted = convertDateFormat(cleanValue);
               if (converted && converted !== cleanValue) {
                 valueToMap = converted;
-                console.log(`📅 Date converted for ${key}: ${cleanValue} → ${valueToMap}`);
               }
             }
 
             updatedFormData[similarField] = valueToMap;
-            console.log(`✅ FALLBACK SUCCESS: Mapped ${key} -> ${similarField}: "${valueToMap}"`);
           }
         }
       } else {
-        console.log(`No direct mapping found for ${key}, trying auto-match...`);
         
         // Enhanced auto-matching logic
         const formKeys = Object.keys(formData);
@@ -827,32 +893,23 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
         
         if (matchingKey) {
           updatedFormData[matchingKey] = cleanValue;
-          console.log(`✅ AUTO-MATCHED: ${key} -> ${matchingKey}: "${cleanValue}"`);
         } else {
           console.log(`❌ NO MATCH: Could not find form field for ${key}`);
         }
       }
     }
   });
-  
-  console.log('Final mapped form data:', updatedFormData);
+
   return updatedFormData;
 }
 
 // Validate if the document contains expected fields based on document type
 export function validateDocumentFields(extractedData: ExtractedPassportData, pageType?: string): ValidationResult {
-  console.log('🚀 === VALIDATION START ===');
-  console.log('🔍 Input pageType:', pageType);
-  console.log('📊 Extracted data keys:', Object.keys(extractedData));
-  console.log('📊 Extracted data values:', extractedData);
-  
   // COMPREHENSIVE FIX: Handle address/last pages properly
   if (pageType) {
     const normalizedPageType = pageType.toLowerCase();
-    console.log('🆘 PAGE TYPE OVERRIDE ACTIVATED for:', pageType);
-    
+
     if (normalizedPageType.includes('address') || normalizedPageType.includes('last')) {
-      console.log('✅ ADDRESS/LAST PAGE: Skipping dateOfBirth requirement');
       return {
         isValid: true,
         documentType: 'passport-address',

@@ -108,6 +108,20 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     return 'passport'; // default to passport group
   };
 
+  // Helper function to check which document types have been uploaded
+  const getUploadedDocumentTypes = (): { hasPassport: boolean; hasVisa: boolean; hasEmiratesId: boolean } => {
+    const types = extractedDocuments.map(doc => {
+      const pageType = doc.pageType || '';
+      return getPageTypeGroup(pageType);
+    });
+
+    return {
+      hasPassport: types.includes('passport'),
+      hasVisa: types.includes('visa'),
+      hasEmiratesId: types.includes('aadhar')
+    };
+  };
+
   useEffect(() => {
     const newFields = formData?.inputForm?.fields || [];
 
@@ -194,20 +208,15 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       setIsExtracting({});
       setExtractionError(null);
       
-      console.log('FormBuilder: Form completely cleared with proper field initialization');
-      console.log('FormBuilder: Cleared form values:', clearedFormValues);
     }
   }, [clearFormTrigger, fields]);
 
   // Watch for changes to initialData and update form values
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
-      console.log('FormBuilder: initialData changed, updating form values:', initialData);
-
       setFormValues(prev => {
         // Merge initialData with existing values, prioritizing initialData
         const updated = { ...prev, ...initialData };
-        console.log('FormBuilder: Updated form values with initialData:', updated);
         return updated;
       });
     }
@@ -475,14 +484,15 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         // This ensures newly uploaded documents use fresh extraction, not cached/old database data
         console.log('✅ Using FRESH extraction data, not database');
         console.log('🔍 Original extractedData:', extractedData);
-        const populatedData = mapPassportToFormFields(extractedData, formValues, storageResult.documentType.toString());
-        console.log('🔍 After mapPassportToFormFields:', populatedData);
-        console.log('🔍 Looking for Emirates ID in populatedData:');
-        Object.entries(populatedData).forEach(([key, value]) => {
-          if (typeof value === 'string' && /\b\d{3}-\d{4}-\d{7}-\d{1}\b/.test(value)) {
-            console.log(`  🆔 FOUND EMIRATES ID in populatedData field "${key}":`, value);
-          }
+        console.log('🔍 formValues being passed to mapper (keys count:', Object.keys(formValues).length, ')');
+        console.log('🔍 formValues keys sample (first 20):', Object.keys(formValues).slice(0, 20));
+        console.log('🔍 Checking for visa fields in formValues:', {
+          'Visa_Number': formValues.hasOwnProperty('Visa_Number'),
+          'Visa_Expiry_Date': formValues.hasOwnProperty('Visa_Expiry_Date'),
+          'VISA_Number': formValues.hasOwnProperty('VISA_Number'),
+          'VISA_Expiry_Date': formValues.hasOwnProperty('VISA_Expiry_Date'),
         });
+        const populatedData = mapPassportToFormFields(extractedData, formValues, storageResult.documentType.toString());
         setFormValues(populatedData);
         
         // Clear status after 5 seconds
@@ -1092,15 +1102,53 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         );
       
       case 'tel':
-        return (
-          <input
-            type="tel"
-            className="form-input"
-            placeholder={field.comment || 'Enter phone number'}
-            value={value || ''}
-            onChange={(e) => handleChange(fieldKey, e.target.value)}
-          />
-        );
+        // Show country selector for UAE Mobile Number and Indian Active Mobile Number
+        if (field.label === 'UAE Mobile Number' || field.label === 'Indian Active Mobile Number') {
+          const phoneCountryKey = `${fieldKey}_country`;
+          // Set default based on field: +971 for UAE, +91 for Indian
+          const defaultCode = field.label === 'Indian Active Mobile Number' ? '+91' : '+971';
+          const phoneCountryCode = formValues[phoneCountryKey] || defaultCode;
+
+          return (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <select
+                className="form-select"
+                style={{ width: '140px', flex: '0 0 auto' }}
+                value={phoneCountryCode}
+                onChange={(e) => handleChange(phoneCountryKey, e.target.value)}
+              >
+                <option value="+971">🇦🇪 +971</option>
+                <option value="+91">🇮🇳 +91</option>
+                <option value="+966">🇸🇦 +966</option>
+                <option value="+974">🇶🇦 +974</option>
+                <option value="+965">🇰🇼 +965</option>
+                <option value="+968">🇴🇲 +968</option>
+                <option value="+973">🇧🇭 +973</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+44">🇬🇧 +44</option>
+              </select>
+              <input
+                type="tel"
+                className="form-input"
+                style={{ flex: '1' }}
+                placeholder={field.comment || 'Enter phone number'}
+                value={value || ''}
+                onChange={(e) => handleChange(fieldKey, e.target.value)}
+              />
+            </div>
+          );
+        } else {
+          // For other phone fields (WhatsApp, etc.), show simple input
+          return (
+            <input
+              type="tel"
+              className="form-input"
+              placeholder={field.comment || 'Enter phone number'}
+              value={value || ''}
+              onChange={(e) => handleChange(fieldKey, e.target.value)}
+            />
+          );
+        }
       
       case 'email':
         return (
@@ -2091,8 +2139,12 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                       </div>
                     )}
 
-                    {/* Passport Details */}
-                    {(currentData.passportNumber || currentData.dateOfIssue || currentData.dateOfExpiry) && (
+                    {/* Passport Details - Only show if passport document was uploaded */}
+                    {(() => {
+                      const { hasPassport } = getUploadedDocumentTypes();
+                      const hasPassportData = currentData.passportNumber || currentData.dateOfIssue || currentData.dateOfExpiry;
+                      return hasPassport && hasPassportData;
+                    })() && (
                       <div className="data-section">
                         <h4>📘 Passport Details</h4>
                         {currentData.passportNumber && (
@@ -2151,16 +2203,23 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                         </div>
 
                         {(() => {
+                          // Only show Emirates ID section if Emirates ID document was uploaded
+                          const { hasEmiratesId } = getUploadedDocumentTypes();
+                          if (!hasEmiratesId) {
+                            console.log('🔍 No Emirates ID document uploaded - hiding section');
+                            return false;
+                          }
+
                           // AGGRESSIVE Emirates ID Detection
                           console.log('🔍 DISPLAY CHECK: Looking for Emirates ID in currentData');
                           console.log('🔍 currentData keys:', Object.keys(currentData));
-                          
+
                           // Method 1: Direct field check
                           if (currentData.emiratesIdNumber) {
                             console.log('🔍 Method 1 SUCCESS: Found emiratesIdNumber:', currentData.emiratesIdNumber);
                             return true;
                           }
-                          
+
                           // Method 2: Alternative field names
                           const altFields = ['emirates_id_number', 'Emirates_ID_Number', 'ID_Number', 'emiratesId'];
                           for (const field of altFields) {
@@ -2169,7 +2228,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                               return true;
                             }
                           }
-                          
+
                           // Method 3: Pattern scan in ALL fields
                           const emiratesPattern = /\b\d{3}-\d{4}-\d{7}-\d{1}\b/;
                           for (const [key, value] of Object.entries(currentData)) {
@@ -2178,10 +2237,10 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                               return true;
                             }
                           }
-                          
+
                           // Method 4: Keyword-based field detection
-                          const keywordFields = Object.keys(currentData).filter(key => 
-                            key.toLowerCase().includes('emirates') || 
+                          const keywordFields = Object.keys(currentData).filter(key =>
+                            key.toLowerCase().includes('emirates') ||
                             key.toLowerCase().includes('id') ||
                             key.toLowerCase().includes('number')
                           );
@@ -2189,7 +2248,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                             console.log('🔍 Method 4 SUCCESS: Keyword fields found:', keywordFields);
                             return true;
                           }
-                          
+
                           console.log('🔍 ALL METHODS FAILED: No Emirates ID detected');
                           return false;
                         })() && (
@@ -2290,6 +2349,122 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                       </div>
                     )}
 
+                    {/* VISA Details - Only show if VISA document was uploaded */}
+                    {(() => {
+                      const { hasVisa } = getUploadedDocumentTypes();
+                      const hasVisaData = currentData.visaNumber || currentData.visaType || currentData.visaClass ||
+                                         currentData.controlNumber || currentData.visaReferenceNumber ||
+                                         currentData.visaIssueDate || currentData.visaExpiryDate ||
+                                         currentData.issuingPostName;
+                      return hasVisa && hasVisaData;
+                    })() && (
+                      <div className="data-section">
+                        <h4>🛂 VISA Details</h4>
+
+                        {/* Visa Number / Control Number */}
+                        {(currentData.visaNumber || currentData.controlNumber || currentData.visaReferenceNumber) && (
+                          <div className="data-item" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '2px solid #8b5cf6' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label" style={{ color: '#8b5cf6', fontWeight: 'bold' }}>Visa/Control Number:</span>
+                              <span className="data-value" style={{ fontWeight: '600' }}>
+                                {currentData.visaNumber || currentData.controlNumber || currentData.visaReferenceNumber}
+                              </span>
+                            </div>
+                            <CopyPasteButton
+                              value={currentData.visaNumber || currentData.controlNumber || currentData.visaReferenceNumber}
+                              fieldName="visaNumber"
+                              label="Visa Number"
+                              showAdvanced={true}
+                            />
+                          </div>
+                        )}
+
+                        {/* Visa Type/Class */}
+                        {(currentData.visaType || currentData.visaClass || currentData.visaCategory) && (
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label">Visa Type/Class:</span>
+                              <span className="data-value">
+                                {currentData.visaType || currentData.visaClass || currentData.visaCategory}
+                              </span>
+                            </div>
+                            <CopyPasteButton
+                              value={currentData.visaType || currentData.visaClass || currentData.visaCategory}
+                              fieldName="visaType"
+                              label="Visa Type"
+                              showAdvanced={false}
+                            />
+                          </div>
+                        )}
+
+                        {/* Issuing Post Name */}
+                        {currentData.issuingPostName && (
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label">Issuing Post:</span>
+                              <span className="data-value">{currentData.issuingPostName}</span>
+                            </div>
+                            <CopyPasteButton
+                              value={currentData.issuingPostName}
+                              fieldName="issuingPostName"
+                              label="Issuing Post"
+                              showAdvanced={false}
+                            />
+                          </div>
+                        )}
+
+                        {/* Visa Issue Date */}
+                        {(currentData.visaIssueDate || currentData.issueDate) && (
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label">Visa Issue Date:</span>
+                              <span className="data-value">{currentData.visaIssueDate || currentData.issueDate}</span>
+                            </div>
+                            <CopyPasteButton
+                              value={currentData.visaIssueDate || currentData.issueDate}
+                              fieldName="visaIssueDate"
+                              label="Visa Issue Date"
+                              showAdvanced={false}
+                            />
+                          </div>
+                        )}
+
+                        {/* Visa Expiry Date */}
+                        {(currentData.visaExpiryDate || currentData.expiryDate) && (
+                          <div className="data-item" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '2px solid #8b5cf6' }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label" style={{ color: '#8b5cf6', fontWeight: 'bold' }}>Visa Expiry Date:</span>
+                              <span className="data-value" style={{ fontWeight: '600' }}>
+                                {currentData.visaExpiryDate || currentData.expiryDate}
+                              </span>
+                            </div>
+                            <CopyPasteButton
+                              value={currentData.visaExpiryDate || currentData.expiryDate}
+                              fieldName="visaExpiryDate"
+                              label="Visa Expiry Date"
+                              showAdvanced={true}
+                            />
+                          </div>
+                        )}
+
+                        {/* Entries/Annotation */}
+                        {(currentData.entries || currentData.annotation) && (
+                          <div className="data-item">
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <span className="data-label">Entries/Annotation:</span>
+                              <span className="data-value">{currentData.entries || currentData.annotation}</span>
+                            </div>
+                            <CopyPasteButton
+                              value={currentData.entries || currentData.annotation}
+                              fieldName="entries"
+                              label="Entries"
+                              showAdvanced={false}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Address Information */}
                     {currentData.address && (
                       <div className="data-section">
@@ -2375,41 +2550,6 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h2 style={{ margin: 0 }}>{formData.inputForm?.title || 'ORMA Kshemanidhi Application Form'}</h2>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {/* Load Latest Record Button */}
-            <button
-              type="button"
-              onClick={handleLoadLatestRecord}
-              disabled={isLoadingLatest || isReadOnly}
-              style={{
-                padding: '0.6rem 1.2rem',
-                background: isLoadingLatest ? '#9ca3af' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: isLoadingLatest || isReadOnly ? 'not-allowed' : 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                transition: 'all 0.2s ease'
-              }}
-              title="Load the latest record from database"
-            >
-              {isLoadingLatest ? (
-                <>
-                  <span className="spinner" style={{ border: '2px solid #f3f4f6', borderTopColor: 'white', borderRadius: '50%', width: '14px', height: '14px', animation: 'spin 1s linear infinite' }}></span>
-                  Loading...
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: '1.1rem' }}>📥</span>
-                  Load Latest Record
-                </>
-              )}
-            </button>
-
             {/* Clear Form Button */}
             {editingDatabaseRecord && (
               <button
@@ -2562,9 +2702,6 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                       <span className="error-message">{errors[fieldKey]}</span>
                     );
                   })()}
-                  {field.comment && (
-                    <small className="field-comment">{field.comment}</small>
-                  )}
                 </div>
               );
             })}
@@ -2581,7 +2718,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         <div className="upload-grid">
           {/* Passport Upload - Combined Front and Address */}
           <div className="upload-card">
-            <h4>📘 Passport First Page</h4>
+            <h4>📘 Passport</h4>
             <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
               {/* Front Upload */}
               <input
@@ -2636,6 +2773,33 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                   <>📷 Back</>
                 )}
               </label>
+
+              {/* Combined Upload (Both Pages) */}
+              <input
+                type="file"
+                id="passport-combined"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'combined');
+                  }
+                }}
+                disabled={isExtracting.combined}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="passport-combined" className={`upload-btn ${isExtracting.combined ? 'disabled' : ''} ${uploadedFiles.combined ? 'uploaded' : ''}`}>
+                {isExtracting.combined ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.combined ? (
+                  <>✅ Combined</>
+                ) : (
+                  <>📄 Combined</>
+                )}
+              </label>
             </div>
           </div>
 
@@ -2643,7 +2807,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
           {/* Emirates ID Upload - Separate Card */}
           <div className="upload-card">
-            <h4>🆔 Emirates ID</h4>
+            <h4>🆔 Emirates ID / VISA</h4>
             <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
               {/* Emirates ID Front Upload */}
               <input
@@ -2698,64 +2862,31 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                   <>📷 Back</>
                 )}
               </label>
-            </div>
-          </div>
 
-          {/* VISA Upload - Separate Card */}
-          <div className="upload-card">
-            <h4>📋 VISA</h4>
-            <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-              {/* VISA Front Upload */}
+              {/* Combined Upload (Both Pages) */}
               <input
                 type="file"
-                id="visa-front"
+                id="emirates-id-combined"
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    handlePassportUpload(file, 'visa_front');
+                    handlePassportUpload(file, 'emirates_id_combined');
                   }
                 }}
-                disabled={isExtracting.visa_front}
+                disabled={isExtracting.emirates_id_combined}
                 style={{ display: 'none' }}
               />
-              <label htmlFor="visa-front" className={`upload-btn ${isExtracting.visa_front ? 'disabled' : ''} ${uploadedFiles.visa_front ? 'uploaded' : ''}`}>
-                {isExtracting.visa_front ? (
+              <label htmlFor="emirates-id-combined" className={`upload-btn ${isExtracting.emirates_id_combined ? 'disabled' : ''} ${uploadedFiles.emirates_id_combined ? 'uploaded' : ''}`}>
+                {isExtracting.emirates_id_combined ? (
                   <>
                     <span className="spinner"></span>
                     Extracting...
                   </>
-                ) : uploadedFiles.visa_front ? (
-                  <>✅ Front</>
+                ) : uploadedFiles.emirates_id_combined ? (
+                  <>✅ Combined</>
                 ) : (
-                  <>📷 Front</>
-                )}
-              </label>
-
-              {/* VISA Back Upload */}
-              <input
-                type="file"
-                id="visa-back"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handlePassportUpload(file, 'visa_back');
-                  }
-                }}
-                disabled={isExtracting.visa_back}
-                style={{ display: 'none' }}
-              />
-              <label htmlFor="visa-back" className={`upload-btn ${isExtracting.visa_back ? 'disabled' : ''} ${uploadedFiles.visa_back ? 'uploaded' : ''}`}>
-                {isExtracting.visa_back ? (
-                  <>
-                    <span className="spinner"></span>
-                    Extracting...
-                  </>
-                ) : uploadedFiles.visa_back ? (
-                  <>✅ Back</>
-                ) : (
-                  <>📷 Back</>
+                  <>📄 Combined</>
                 )}
               </label>
             </div>
@@ -2818,38 +2949,34 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                   <>📷 Back</>
                 )}
               </label>
-            </div>
-          </div>
 
-          {/* Handwritten Form - Document 4 */}
-          <div className="upload-card">
-            <h4>✍️ (For ORMA Admin Only)</h4>
-            <input
-              type="file"
-              id="handwritten-form"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  // Set a specific field key for handwritten forms
-                  handleFileUpload('handwritten_form', file);
-                }
-              }}
-              disabled={isExtracting.handwritten_form}
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="handwritten-form" className={`upload-btn ${isExtracting.handwritten_form ? 'disabled' : ''} ${uploadedFilesData.handwritten_form ? 'uploaded' : ''}`}>
-              {isExtracting.handwritten_form ? (
-                <>
-                  <span className="spinner"></span>
-                  Extracting...
-                </>
-              ) : uploadedFilesData.handwritten_form ? (
-                <>✅ {uploadedFilesData.handwritten_form.name}</>
-              ) : (
-                <>📝 Upload Form</>
-              )}
-            </label>
+              {/* Combined Upload (Both Pages) */}
+              <input
+                type="file"
+                id="aadhar-combined"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handlePassportUpload(file, 'aadhar_combined');
+                  }
+                }}
+                disabled={isExtracting.aadhar_combined}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="aadhar-combined" className={`upload-btn ${isExtracting.aadhar_combined ? 'disabled' : ''} ${uploadedFiles.aadhar_combined ? 'uploaded' : ''}`}>
+                {isExtracting.aadhar_combined ? (
+                  <>
+                    <span className="spinner"></span>
+                    Extracting...
+                  </>
+                ) : uploadedFiles.aadhar_combined ? (
+                  <>✅ Combined</>
+                ) : (
+                  <>📄 Combined</>
+                )}
+              </label>
+            </div>
           </div>
         </div>
         
@@ -2883,47 +3010,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           </div>
         )}
       </div>
-      
-      {/* Display extracted passport data */}
-      {Object.keys(formValues).filter(key => formValues[key] && formValues[key] !== '').length > 0 && (
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: '12px',
-          padding: '1.5rem',
-          margin: '2rem 0',
-          color: 'white'
-        }}>
-          <h3 style={{ fontSize: '1.3rem', marginBottom: '1rem', color: 'white' }}>
-            📋 Extracted Passport Data
-          </h3>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '1rem',
-            background: 'rgba(255, 255, 255, 0.1)',
-            padding: '1rem',
-            borderRadius: '8px'
-          }}>
-            {Object.entries(formValues)
-              .filter(([key, value]) => value && value !== '')
-              .map(([key, value]) => (
-                <div key={key} style={{
-                  padding: '0.5rem',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '4px'
-                }}>
-                  <span style={{ fontWeight: 'bold', color: 'rgba(255, 255, 255, 0.9)' }}>
-                    {key}:
-                  </span>{' '}
-                  <span style={{ color: 'white' }}>
-                    {Array.isArray(value) ? value.join(', ') : String(value)}
-                  </span>
-                </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
+
       <hr className="divider" />
       
       {/* Display extracted text from PDF */}
@@ -3002,9 +3089,6 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
                 <span className="error-message">{errors[fieldKey]}</span>
               );
             })()}
-            {field.comment && (
-              <small className="field-comment">{field.comment}</small>
-            )}
           </div>
           );
         })

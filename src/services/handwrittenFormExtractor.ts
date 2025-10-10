@@ -32,6 +32,23 @@ const convertDateFormat = (dateStr: string | undefined): string | undefined => {
     return converted;
   }
 
+  // Convert DDMMMYYYY format (e.g., 23JAN2034, 05MAR2025) - common in VISA documents
+  const monthMap: { [key: string]: string } = {
+    'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAY': '05', 'JUN': '06',
+    'JUL': '07', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+  };
+
+  const ddmmmyyyyMatch = dateStr.match(/^(\d{1,2})([A-Z]{3})(\d{4})$/i);
+  if (ddmmmyyyyMatch) {
+    const [, day, monthName, year] = ddmmmyyyyMatch;
+    const month = monthMap[monthName.toUpperCase()];
+    if (month) {
+      const converted = `${year}-${month}-${day.padStart(2, '0')}`;
+      console.log('📅 Converted DDMMMYYYY to YYYY-MM-DD:', dateStr, '→', converted);
+      return converted;
+    }
+  }
+
   console.log('📅 Date format not recognized, returning as-is:', dateStr);
   return dateStr; // Return as-is if format not recognized
 };

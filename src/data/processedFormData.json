@@ -4,7 +4,7 @@
     "fields": [
       {
         "label": "ORGANISATION",
-        "type": "ORMA/NON ORMA/ GRANMA/ TRACE/KERA/UMA/ OTHERs (list) if OTHERS provision to Enter ",
+        "type": "",
         "comment": "",
         "inputType": "select",
         "options": [
@@ -20,17 +20,17 @@
       {
         "label": "Apply For",
         "type": "NORKA ID or NORKA INSURANCE or KSHEMANIDHI - Select Multiple",
-        "comment": "Select all that apply",
+        "comment": "",
         "inputType": "checkbox",
         "options": [
-          "NORKA ID",
-          "NORKA INSURANCE",
-          "KSHEMANIDHI"
+          "NORKA ID (New/Renewal) - 20 AED",
+          "KSHEMANIDHI Reg - 10 AED",
+          "PRAVASI INSURANCE-35 AED"
         ]
       },
       {
         "label": "Type",
-        "type": "NEW or RENEWAL - dropdown",
+        "type": "",
         "comment": "",
         "inputType": "select",
         "options": [
@@ -52,61 +52,61 @@
       },
       {
         "label": "Applicant Full Name in CAPITAL",
-        "type": "APPLICANT NAME ",
-        "comment": "Verify and confirm if already filled",
+        "type": "",
+        "comment": "Enter Applicant Full Name in CAPITAL",
         "inputType": "text"
       },
       {
         "label": "First Name",
-        "type": "First Name:(Given Name in the Passport)",
-        "comment": "",
+        "type": "",
+        "comment": "Enter First Name",
         "inputType": "text"
       },
       {
         "label": "Middle Name",
-        "type": "Middle Name:",
-        "comment": "",
+        "type": "",
+        "comment": "Enter Middle Name",
         "inputType": "text"
       },
       {
         "label": "Last Name",
-        "type": "Last Name (Surname in the PP) :",
-        "comment": "",
+        "type": "",
+        "comment": "Enter Last Name",
         "inputType": "text"
       },
       {
         "label": "UAE Mobile Number",
-        "type": "UAE Mobile Number:",
-        "comment": "Input  digit mobile number  by customer (stating with 5xxxxxxxx. Country code will be there",
+        "type": "",
+        "comment": "starting with 5xxxxxxxx",
         "inputType": "tel"
       },
       {
         "label": "WhatsApp Number",
-        "type": "WhatsApp Number:",
+        "type": "",
         "comment": "Input with country code",
         "inputType": "tel"
       },
       {
         "label": "Permanent Residence Address",
-        "type": "Permament Residence Address :",
-        "comment": "Autofill from Ppassport address page but editable",
+        "type": "",
+        "comment": "Enter Permanent Residence Address",
         "inputType": "text"
       },
       {
         "label": "PIN Code",
-        "type": "PINcode",
-        "comment": "Autofill from Ppassport address page but editable",
+        "type": "",
+        "comment": "Enter PIN Code",
         "inputType": "text"
       },
       {
         "label": "Email ID",
-        "type": "email id",
+        "type": "",
         "comment": "input",
         "inputType": "email"
       },
       {
         "label": "Indian Active Mobile Number",
-        "type": "Indian Active Mobile Number ",
+        "type": "",
         "comment": "input",
         "inputType": "tel"
       },
@@ -131,56 +131,32 @@
       },
       {
         "label": "Local Body Name",
-        "type": "Name of Panchayath/Municipality/Corporation",
-        "comment": "Input",
+        "type": "",
+        "comment": "Name of Panchayath/Municipality/Corporation",
         "inputType": "text"
       },
       {
         "label": "District",
-        "type": "District ",
-        "comment": "Input",
+        "type": "",
+        "comment": "Enter District",
         "inputType": "text"
       },
       {
         "label": "Current Residence Address (Abroad)",
-        "type": "Abroad Current Residence address ",
-        "comment": "input",
+        "type": "",
+        "comment": "Enter Current Residence Address (Abroad)",
         "inputType": "text"
       },
       {
         "label": "Aadhaar Number",
-        "type": "Aadhar number",
-        "comment": "Autofill if Aadhar copy uploaded",
-        "inputType": "text"
-      },
-      {
-        "label": "Nominee Date of Birth",
-        "type": " Nominee name ",
-        "comment": "DOB",
-        "inputType": "date"
-      },
-      {
-        "label": "Nominee 1 Name",
-        "type": "1",
-        "comment": "First nominee details",
-        "inputType": "text"
-      },
-      {
-        "label": "Nominee 2 Name",
-        "type": "2",
-        "comment": "Second nominee details",
-        "inputType": "text"
-      },
-      {
-        "label": "Nominee 3 Name",
-        "type": "3",
-        "comment": "Third nominee details",
+        "type": "(optional)",
+        "comment": "Enter Aadhaar Number",
         "inputType": "text"
       },
       {
         "label": "Form Collected By",
-        "type": "Form Collected by ",
-        "comment": "Input",
+        "type": "",
+        "comment": "Enter Form Collected By",
         "inputType": "text"
       },
       {
@@ -254,6 +230,12 @@
         "type": "text",
         "comment": "",
         "inputType": "text"
+      },
+      {
+        "label": "Nominee Date of Birth",
+        "type": "",
+        "comment": "Enter Nominee Date of Birth",
+        "inputType": "date"
       },
       {
         "label": "Relationship",

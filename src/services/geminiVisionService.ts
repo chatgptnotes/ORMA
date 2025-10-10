@@ -178,7 +178,36 @@ export async function extractTextFromImage(
 
         // Create a comprehensive prompt for passport/document text extraction
         const prompt = `
-Please extract ALL text from this document image. This could be a PASSPORT, EMIRATES ID, or VISA document. Pay special attention to:
+**IMPORTANT: This image might be a VISA, PASSPORT, or EMIRATES ID document.**
+
+**FOR VISA DOCUMENTS (if you see "VISA", "Control Number", visa stamps):**
+
+**EXAMPLE USA VISA:**
+If you see a visa with:
+- "Control Number: 20241234560001" → extract "20241234560001" as visaNumber
+- "Expiration Date: 23JAN2034" → extract "23JAN2034" as visaExpiryDate
+- "Issue Date: 23JAN2024" → extract "23JAN2024" as visaIssueDate
+- "Visa Type /Class: R B1/B2" → extract "R" as visaType and "B1/B2" as visaClass
+- "Issuing Post Name: FRANKFURT" → extract "FRANKFURT" as issuingPostName
+- "Entries: M" → extract "M" as entries
+
+**REQUIRED FIELDS TO EXTRACT FROM VISA:**
+1. **Control Number** or **Visa Number** (the large identification number) → "visaNumber"
+2. **Expiration Date** or **Expiry Date** (when visa expires) → "visaExpiryDate"
+3. **Issue Date** (when visa was issued) → "visaIssueDate"
+4. **Visa Type/Class** (e.g., R, B1/B2, Tourist) → "visaType" and "visaClass"
+5. **Issuing Post Name** (where issued, e.g., FRANKFURT, DUBAI) → "issuingPostName"
+6. **Entries** (e.g., M for multiple, S for single) → "entries"
+
+FOR VISA DOCUMENTS: Extract name/nationality/gender if visible, but DO NOT extract passportNumber, dateOfIssue, dateOfExpiry, or placeOfIssue fields (those are for passports only).
+
+**FOR PASSPORT DOCUMENTS:**
+Extract passport-specific fields (passportNumber, dateOfIssue, placeOfIssue, etc.)
+
+**FOR EMIRATES ID DOCUMENTS:**
+Extract Emirates ID specific fields (emiratesIdNumber, etc.)
+
+Pay special attention to:
 
 1. Personal Information:
    - Full name in English (surname and given names)
@@ -214,14 +243,20 @@ Please extract ALL text from this document image. This could be a PASSPORT, EMIR
    - Area code
    - Names in both English and Arabic
 
-5. VISA Specific:
-   - VISA type (tourist, business, etc.)
-   - VISA category
+5. VISA Specific (IMPORTANT - Extract these for VISAs):
+   - **CONTROL NUMBER** or **VISA NUMBER**: The unique visa identifier
+     * USA VISA: Look for "Control Number" (e.g., 20241234560001)
+     * Other VISAs: Look for "Visa Number", "UID", "Reference Number"
+     * This is the PRIMARY visa identifier - extract it as "visaNumber"
+   - **VISA ISSUE DATE**: When the visa was issued (e.g., 23JAN2024)
+   - **VISA EXPIRY DATE**: When the visa expires (e.g., 23JAN2034)
+   - **ISSUING POST NAME**: Where the visa was issued (e.g., FRANKFURT, DUBAI, MUMBAI)
+   - **VISA TYPE/CLASS**: Type or class of visa (e.g., R, B1/B2, tourist, business, work, etc.)
+   - Entries/Annotation (e.g., M for multiple entry, S for single entry)
    - Port of entry
    - Purpose of visit
    - Sponsor information
    - Duration of stay
-   - Entries allowed
 
 6. Family Information:
    - Father's name
@@ -281,30 +316,37 @@ CRITICAL INSTRUCTIONS FOR EMIRATES ID EXTRACTION:
 - Emirates ID numbers may appear after text like "ID Number", "رقم الهوية", or standalone
 - If this is an Emirates ID document, you MUST extract the ID number even if other fields are missing
 
+**IMPORTANT:** Follow the document type detection rules above. If this is a VISA, fill VISA fields. If this is a PASSPORT, fill passport fields. Do NOT mix fields from different document types.
+
 Return the response in this JSON format:
 {
   "extractedText": "All extracted text here...",
   "structuredData": {
-    "surname": "extracted surname",
-    "givenName": "extracted given name",
-    "fullName": "complete full name",
-    "fullNameArabic": "full name in Arabic if present",
-    "firstNameEnglish": "first name in English",
-    "lastNameEnglish": "last name in English", 
-    "firstNameArabic": "first name in Arabic if present",
-    "lastNameArabic": "last name in Arabic if present",
+    "visaNumber": "IF VISA: Extract Control Number or Visa Number (the large number, e.g. 20241234560001)",
+    "visaExpiryDate": "IF VISA: Extract Expiration Date (e.g. 23JAN2034) - the date when visa expires",
+    "visaIssueDate": "IF VISA: Extract Issue Date (e.g. 23JAN2024) - the date when visa was issued",
+    "visaType": "IF VISA: Extract Visa Type (e.g. R, B1/B2, Tourist, Business)",
+    "visaClass": "IF VISA: Extract Visa Class (e.g. B1/B2) if shown separately from type",
+    "issuingPostName": "IF VISA: Extract Issuing Post Name (e.g. FRANKFURT, DUBAI, MUMBAI)",
+    "entries": "IF VISA: Extract Entries (e.g. M for multiple entry, S for single entry)",
+    "annotation": "IF VISA: Extract any annotation text",
+    "surname": "Surname/Last name (for all document types)",
+    "givenName": "Given name/First name (for all document types)",
+    "fullName": "Complete full name (for all document types)",
+    "fullNameArabic": "Full name in Arabic if present",
+    "firstNameEnglish": "First name in English",
+    "lastNameEnglish": "Last name in English",
+    "firstNameArabic": "First name in Arabic if present",
+    "lastNameArabic": "Last name in Arabic if present",
     "dateOfBirth": "DD/MM/YYYY",
-    "passportNumber": "CRITICAL: For PASSPORTS, extract ONLY the number after 'Passport No.' label (e.g., W0090302). IGNORE file numbers like T8925844. Format: Letter+7-8 digits",
-    "emiratesIdNumber": "CRITICAL: Emirates ID number (any 15-digit number, format: XXX-YYYY-XXXXXXX-X like 784-1970-5109524-4 or 784197051095244)",
-    "visaNumber": "VISA number (only if this is a VISA)",
-    "visaType": "type of VISA if present",
-    "visaCategory": "VISA category if present",
-    "nationality": "nationality",
+    "nationality": "Nationality",
     "gender": "M/F",
-    "placeOfBirth": "place of birth",
-    "dateOfIssue": "CRITICAL: For PASSPORTS, extract from bio-data page 'Date of Issue' field ONLY. IGNORE visa dates. Format: DD/MM/YYYY",
-    "dateOfExpiry": "CRITICAL: For PASSPORTS, extract from bio-data page 'Date of Expiry' field ONLY. IGNORE visa dates. Format: DD/MM/YYYY",
-    "placeOfIssue": "CRITICAL: For PASSPORTS, extract from bio-data page 'Place of Issue' field (e.g., NEW DELHI). IGNORE visa places like DUBAI",
+    "placeOfBirth": "Place of birth",
+    "passportNumber": "ONLY FOR PASSPORTS: Extract ONLY the number after 'Passport No.' label (e.g., W0090302). IGNORE file numbers like T8925844. Format: Letter+7-8 digits. Leave EMPTY for VISA documents.",
+    "dateOfIssue": "ONLY FOR PASSPORTS: Extract from bio-data page 'Date of Issue' field. IGNORE visa dates. Format: DD/MM/YYYY. Leave EMPTY for VISA documents.",
+    "dateOfExpiry": "ONLY FOR PASSPORTS: Extract from bio-data page 'Date of Expiry' field. IGNORE visa dates. Format: DD/MM/YYYY. Leave EMPTY for VISA documents.",
+    "placeOfIssue": "ONLY FOR PASSPORTS: Extract from bio-data page 'Place of Issue' (e.g., NEW DELHI). IGNORE visa places. Leave EMPTY for VISA documents.",
+    "emiratesIdNumber": "ONLY FOR EMIRATES ID: 15-digit number (format: XXX-YYYY-XXXXXXX-X like 784-1970-5109524-4). Leave EMPTY for other documents.",
     "emiratesResidence": "emirate of residence if Emirates ID",
     "areaCode": "area code if present",
     "portOfEntry": "port of entry if VISA",

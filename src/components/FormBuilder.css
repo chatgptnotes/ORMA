@@ -383,6 +383,13 @@
   accent-color: #667eea;
 }
 
+/* Remove focus outline from checkboxes and radio buttons */
+.checkbox-label input[type="checkbox"]:focus,
+.radio-label input[type="radio"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 /* Enhanced styling for better visibility */
 .radio-group,
 .checkbox-group {

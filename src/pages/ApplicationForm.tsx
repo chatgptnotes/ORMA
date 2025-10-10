@@ -163,11 +163,6 @@ const ApplicationForm: React.FC = () => {
               <FileText className="h-5 w-5 text-indigo-600 mr-2" />
               <span className="text-xl font-semibold text-gray-900">ORMA Kshemanidhi Application Form</span>
             </div>
-            <div className="flex items-center">
-              <Link to="/dashboard" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
-                Dashboard
-              </Link>
-            </div>
           </div>
         </div>
       </nav>
@@ -176,69 +171,7 @@ const ApplicationForm: React.FC = () => {
         {!showPreview ? (
           <>
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Kshemanidhi Welfare Fund Application</h1>
-              <p className="text-gray-600">Complete all 43 required fields for your ORMA welfare application</p>
-            </div>
-
-            {/* Auto-fill Status and Controls */}
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <FileText className="h-5 w-5 text-indigo-600 mr-2" />
-                  <h2 className="text-lg font-semibold text-gray-900">Passport Data Auto-Fill</h2>
-                </div>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleRefreshPassportData}
-                    disabled={isLoadingPassportData}
-                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingPassportData ? 'animate-spin' : ''}`} />
-                    {isLoadingPassportData ? 'Loading...' : 'Refresh Data'}
-                  </button>
-                  <button
-                    onClick={handleClearFormData}
-                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear Data
-                  </button>
-                </div>
-              </div>
-
-              {/* Status Messages */}
-              {showAutoFillSuccess && (
-                <div className="flex items-center p-3 mb-4 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                  <span className="text-green-800">
-                    Form automatically filled with latest passport data from database 
-                    {latestPassportRecord && (
-                      <span className="font-medium">
-                        ({latestPassportRecord.full_name || 'Record'} - {latestPassportRecord.passport_number || 'N/A'})
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-
-              {autoFillError && (
-                <div className="flex items-center p-3 mb-4 bg-red-50 border border-red-200 rounded-lg">
-                  <XCircle className="h-5 w-5 text-red-600 mr-2" />
-                  <span className="text-red-800">{autoFillError}</span>
-                </div>
-              )}
-
-              {/* Database Stats */}
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <span>
-                  Database Records: <strong>{passportRecordCount}</strong>
-                </span>
-                {latestPassportRecord && (
-                  <span>
-                    Last Updated: <strong>{new Date(latestPassportRecord.updated_at).toLocaleString()}</strong>
-                  </span>
-                )}
-              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">ORMA - NORKA KASHEMANIDHI REGESTRATION/RENEWAL DATA COLLECTION FROM</h1>
             </div>
 
             <FormBuilder 
