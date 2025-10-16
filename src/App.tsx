@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-// Use real AuthContext for proper authentication
-import { AuthProvider } from './contexts/AuthContext';
+// Use DevAuthContext for development (auto-login, no real authentication)
+import { AuthProvider } from './contexts/DevAuthContext';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';

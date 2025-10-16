@@ -242,6 +242,8 @@ Pay special attention to:
    - Emirates residence (which emirate)
    - Area code
    - Names in both English and Arabic
+   - Occupation (job title/profession - usually on front or back)
+   - Employer (company/employer name - usually on back)
 
 5. VISA Specific (IMPORTANT - Extract these for VISAs):
    - **CONTROL NUMBER** or **VISA NUMBER**: The unique visa identifier
@@ -349,6 +351,8 @@ Return the response in this JSON format:
     "emiratesIdNumber": "ONLY FOR EMIRATES ID: 15-digit number (format: XXX-YYYY-XXXXXXX-X like 784-1970-5109524-4). Leave EMPTY for other documents.",
     "emiratesResidence": "emirate of residence if Emirates ID",
     "areaCode": "area code if present",
+    "occupation": "ONLY FOR EMIRATES ID: Job title/profession (e.g., Engineer, Teacher, Driver)",
+    "employer": "ONLY FOR EMIRATES ID BACK: Employer/Company name (visible on back side of Emirates ID)",
     "portOfEntry": "port of entry if VISA",
     "purposeOfVisit": "purpose of visit if VISA",
     "sponsorInformation": "sponsor details if VISA",

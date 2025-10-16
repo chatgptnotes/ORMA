@@ -4,12 +4,16 @@ import FormBuilder from '../components/FormBuilder';
 import { processedFormData as formData } from '../data/processedFormData';
 import { ArrowLeft, Home, FileText, RefreshCw, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { 
-  fetchLatestPassportRecord, 
-  mapPassportRecordToFormFields, 
+import {
+  fetchLatestPassportRecord,
+  mapPassportRecordToFormFields,
   getPassportRecordCount,
-  type PassportRecord 
+  type PassportRecord
 } from '../services/passportRecordsService';
+import {
+  savePassportData,
+  formatPassportDataForSupabase
+} from '../services/supabaseService';
 
 const ApplicationForm: React.FC = () => {
   const navigate = useNavigate();
@@ -33,11 +37,29 @@ const ApplicationForm: React.FC = () => {
     fieldsCount: formData?.inputForm?.fields?.length || 0
   });
 
-  const handleFormSubmit = (data: any) => {
-    setSubmittedData(data);
-    setShowPreview(true);
-    // Here you would normally send the data to your backend
-    console.log('Form submitted:', data);
+  const handleFormSubmit = async (data: any) => {
+    try {
+      console.log('Form submitted, saving to database:', data);
+
+      // Format form data for Supabase
+      const supabaseData = formatPassportDataForSupabase(data);
+
+      // Save to database
+      const saveResult = await savePassportData(supabaseData);
+
+      if (saveResult.success) {
+        console.log('✅ Form data saved to database successfully:', saveResult.data);
+        setSubmittedData(data);
+        setShowPreview(true);
+      } else {
+        console.error('❌ Failed to save form data:', saveResult.error);
+        alert(`Failed to save data: ${saveResult.error}\n\nPlease try again.`);
+      }
+    } catch (error) {
+      console.error('❌ Error saving form:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Error saving form: ${errorMessage}\n\nPlease try again.`);
+    }
   };
 
   const handleFinalSubmit = () => {

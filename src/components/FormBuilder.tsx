@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FormField } from '../types/formTypes';
 import { extractPassportData, mapPassportToFormFields } from '../services/passportExtractor';
-import { extractTextFromPDF } from '../services/pdfExtractor';
 import { extractHandwrittenFormData, mapHandwrittenToFormFields, formatHandwrittenDataForSupabase } from '../services/handwrittenFormExtractor';
 import ExtractedTextDisplay from './ExtractedTextDisplay';
 import { savePassportData, formatPassportDataForSupabase, updatePassportData, getLatestPassportRecord, mapDatabaseRecordToFormFields } from '../services/supabaseService';
@@ -77,6 +76,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     preloadedDocuments && preloadedDocuments.length > 0 ? preloadedDocuments[0].data : null
   );
   const [activeDocumentTab, setActiveDocumentTab] = useState<number>(0);
+  const [hasExtractedData, setHasExtractedData] = useState<boolean>(false); // NEW: Track if we have extracted document data
 
   // Create a consistent field key generation function
   const getFieldKey = (field: FormField, fieldIndex?: number) => {
@@ -149,6 +149,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     const reorderedFields = [...orgFields, ...uploadFields, ...otherFields];
     setFields(reorderedFields);
 
+    // GUARD: Don't overwrite form values if we have extracted document data
+    // This prevents race condition where useEffect runs after extraction completes
+    if (hasExtractedData) {
+      console.log('⚠️ GUARD: Skipping formValues update - extracted document data present');
+      return;
+    }
+
     // Initialize checkbox fields with empty arrays if not already set
     setFormValues(prev => {
       const updates: Record<string, any> = {};
@@ -162,7 +169,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
       return Object.keys(updates).length > 0 ? { ...prev, ...updates } : prev;
     });
-  }, [formData]);
+  }, [formData, hasExtractedData]);
 
   // DISABLED: Auto-load latest record when component mounts
   // User should manually click "Load Latest Record" button to fetch data from database
@@ -203,16 +210,28 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       setCurrentRecordId(null);
       setIsEditingPassportData(false);
       setEditedPassportData(null);
-      
+
       // Clear any extraction states
       setIsExtracting({});
       setExtractionError(null);
-      
+
+      // Clear extracted documents and reset flag
+      setExtractedDocuments([]);
+      setExtractedPassportData(null);
+      setActiveDocumentTab(0);
+      setHasExtractedData(false);
+
     }
   }, [clearFormTrigger, fields]);
 
   // Watch for changes to initialData and update form values
   useEffect(() => {
+    // GUARD: Don't overwrite if we have extracted document data
+    if (hasExtractedData) {
+      console.log('⚠️ GUARD: Skipping initialData merge - extracted document data present');
+      return;
+    }
+
     if (initialData && Object.keys(initialData).length > 0) {
       setFormValues(prev => {
         // Merge initialData with existing values, prioritizing initialData
@@ -220,7 +239,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         return updated;
       });
     }
-  }, [initialData]);
+  }, [initialData, hasExtractedData]);
 
   // Fresh database fetch and form population for real-time updates
   const fetchAndPopulateForm = async (pageType: string) => {
@@ -400,12 +419,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
     setUploadedFiles({ ...uploadedFiles, [pageType]: file });
 
     try {
-      // If it's a PDF, also extract and display the text
-      if (file.type === 'application/pdf') {
-        const pdfText = await extractTextFromPDF(file);
-        setExtractedText(pdfText);
-        setLastPDFName(file.name);
-      }
+      // PDF extraction is now handled by extractPassportData via Gemini Vision API
+      // No need for separate PDF text extraction here
 
       console.log('🔥 About to call extractPassportData with pageType:', pageType);
       const extractedData = await extractPassportData(file, pageType);
@@ -443,10 +458,13 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
       // Switch to the new document tab
       setActiveDocumentTab(Math.min(extractedDocuments.length, 5));
       
-      // Enhanced document processing with automatic type detection and routing
+      // ========== DISABLED: AUTO-SAVE ON DOCUMENT UPLOAD ==========
+      // Data should only be saved when user clicks Submit button
+      // This prevents premature database writes and unwanted "Linked to Record ID" banner
+      /*
       try {
         console.log('🚀 Processing document upload with new document type service');
-        
+
         // Use the new document type service to automatically detect and route data
         const storageResult = await processDocumentUpload(
           extractedData,
@@ -479,44 +497,34 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           });
           console.error('❌ Failed to store document data:', storageResult.message);
         }
-        
-        // Step 3: Populate form with FRESH extracted data (not from database)
-        // This ensures newly uploaded documents use fresh extraction, not cached/old database data
-        console.log('✅ Using FRESH extraction data, not database');
-        console.log('🔍 Original extractedData:', extractedData);
-        console.log('🔍 formValues being passed to mapper (keys count:', Object.keys(formValues).length, ')');
-        console.log('🔍 formValues keys sample (first 20):', Object.keys(formValues).slice(0, 20));
-        console.log('🔍 Checking for visa fields in formValues:', {
-          'Visa_Number': formValues.hasOwnProperty('Visa_Number'),
-          'Visa_Expiry_Date': formValues.hasOwnProperty('Visa_Expiry_Date'),
-          'VISA_Number': formValues.hasOwnProperty('VISA_Number'),
-          'VISA_Expiry_Date': formValues.hasOwnProperty('VISA_Expiry_Date'),
-        });
-        const populatedData = mapPassportToFormFields(extractedData, formValues, storageResult.documentType.toString());
-        setFormValues(populatedData);
-        
-        // Clear status after 5 seconds
-        setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 5000);
-      } catch (error) {
-        console.error('Failed to save passport data:', error);
-        let errorMessage = `Failed to save ${pageType} data`;
-        if (error instanceof Error) {
-          if (error.message.includes('schema cache')) {
-            errorMessage = 'Database schema mismatch. This usually means the database columns don\'t match the application. Please contact support.';
-          } else if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
-            errorMessage = 'Network connection error. Please check your internet connection and try again.';
-          } else if (error.message.includes('Could not find') && error.message.includes('column')) {
-            errorMessage = 'Database column not found. The application may need database schema updates.';
-          } else {
-            errorMessage = `Failed to save ${pageType} data: ${error.message}`;
-          }
-        }
-        setSupabaseSaveStatus({
-          type: 'error',
-          message: errorMessage
-        });
-      }
-      setIsExtracting({ ...isExtracting, [pageType]: false });
+      */
+
+      // Step 3: Populate form with FRESH extracted data (not from database)
+      // This ensures newly uploaded documents use fresh extraction, not cached/old database data
+      console.log('✅ Using FRESH extraction data, not database');
+      console.log('🔍 Original extractedData:', extractedData);
+      console.log('🔍 formValues being passed to mapper (keys count:', Object.keys(formValues).length, ')');
+      console.log('🔍 formValues keys sample (first 20):', Object.keys(formValues).slice(0, 20));
+      console.log('🔍 Checking for visa fields in formValues:', {
+        'Visa_Number': formValues.hasOwnProperty('Visa_Number'),
+        'Visa_Expiry_Date': formValues.hasOwnProperty('Visa_Expiry_Date'),
+        'VISA_Number': formValues.hasOwnProperty('VISA_Number'),
+        'VISA_Expiry_Date': formValues.hasOwnProperty('VISA_Expiry_Date'),
+      });
+
+      // Map extracted data to form fields using detected page type
+      const populatedData = mapPassportToFormFields(extractedData, formValues, pageType);
+      setFormValues(populatedData);
+      setHasExtractedData(true); // Mark that we have extracted data to prevent useEffect overwrites
+
+      // Show success message for extraction only (no database save)
+      setSupabaseSaveStatus({
+        type: 'success',
+        message: `✅ Document extracted successfully. Click Submit to save.`
+      });
+
+      // Clear status after 5 seconds
+      setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 5000);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to extract data';
       setExtractionError(errorMessage);
@@ -663,6 +671,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         const docType = extractedDocuments[activeDocumentTab]?.type || 'passport';
         const mappedData = mapPassportToFormFields(editedPassportData, formValues, docType);
         setFormValues(mappedData);
+        setHasExtractedData(true); // Mark that we have extracted data
 
         // Show success message
         setSupabaseSaveStatus({
@@ -789,12 +798,8 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         setExtractionError(null);
 
         try {
-          // If it's a PDF, also extract and display the text
-          if (file.type === 'application/pdf') {
-            const pdfText = await extractTextFromPDF(file);
-            setExtractedText(pdfText);
-            setLastPDFName(file.name);
-          }
+          // PDF extraction is now handled by extractPassportData/extractHandwrittenFormData via Gemini Vision API
+          // No need for separate PDF text extraction here
 
           let extractedData;
           let mappedData;
@@ -861,8 +866,10 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
           // Switch to the new document tab
           setActiveDocumentTab(Math.min(extractedDocuments.length, 5));
-          
-          // Save extracted data to Supabase
+
+          // ========== DISABLED: AUTO-SAVE FOR HANDWRITTEN FORMS ==========
+          // Data should only be saved when user clicks Submit button
+          /*
           const supabaseData = isHandwrittenField
             ? formatHandwrittenDataForSupabase(extractedData, mappedData)
             : formatPassportDataForSupabase(extractedData, file.name);
@@ -883,7 +890,15 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               message: `Failed to save: ${saveResult.error}`
             });
           }
-          
+          */
+
+          // Show extraction success message (no database save)
+          setSupabaseSaveStatus({
+            type: 'success',
+            message: 'File extracted successfully. Click Submit to save.'
+          });
+          setTimeout(() => setSupabaseSaveStatus({ type: null, message: '' }), 3000);
+
           // Initialize form structure with all field keys if not already done
           let currentFormValues = { ...formValues };
           console.log('Current form values before initialization:', currentFormValues);
@@ -1907,6 +1922,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
 
                           if (mappedFieldsCount > 0) {
                             setFormValues(mappedData);
+                            setHasExtractedData(true); // Mark that we have extracted data
                             // Show success toast
                             setToast({
                               message: 'Auto-Fill Successful',
@@ -2589,12 +2605,11 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           </div>
         </div>
 
-        {/* Show current record status */}
-        {currentRecordId && (
+        {/* Show current record status - ONLY when editing existing database record */}
+        {/* Hidden for new forms to prevent confusion about auto-save */}
+        {currentRecordId && editingDatabaseRecord && (
           <div style={{
-            background: editingDatabaseRecord 
-              ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-              : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
             color: 'white',
             padding: '0.75rem 1rem',
             borderRadius: '8px',
@@ -2606,11 +2621,11 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             fontWeight: '500'
           }}>
             <span style={{ fontSize: '1.1rem' }}>
-              {editingDatabaseRecord ? '✏️' : '🔗'}
+              ✏️
             </span>
             <div style={{ flex: 1 }}>
               <div>
-                {editingDatabaseRecord ? 'Editing' : 'Linked to'} Record ID: {currentRecordId.substring(0, 8)}...
+                Editing Record ID: {currentRecordId.substring(0, 8)}...
               </div>
               {/* Show uploaded pages indicator */}
               <div style={{ fontSize: '0.8rem', opacity: 0.9, marginTop: '0.25rem' }}>
@@ -2623,10 +2638,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               </div>
             </div>
             <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-              {editingDatabaseRecord 
-                ? '(Form will update existing record on submit)' 
-                : '(New uploads will add to this record)'
-              }
+              (Form will update existing record on submit)
             </span>
           </div>
         )}
@@ -2724,7 +2736,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="passport-front"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2751,7 +2763,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="passport-back"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2778,7 +2790,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="passport-combined"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2813,7 +2825,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="emirates-id-front"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2840,7 +2852,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="emirates-id-back"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2867,7 +2879,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="emirates-id-combined"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2900,7 +2912,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="aadhar-front"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2927,7 +2939,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="aadhar-back"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2954,7 +2966,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
               <input
                 type="file"
                 id="aadhar-combined"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -2981,7 +2993,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         </div>
         
         <div className="upload-hint">
-          Supports: JPG, PNG, WebP, PDF • Max 10MB per file
+          Supports: JPG, PNG, WebP, PDF, DOC, DOCX • Max 10MB per file
         </div>
         
         {extractionError && (
@@ -3099,36 +3111,15 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
           </div>
         )}
         
-        <div className="form-actions" style={{ 
-          display: 'flex', 
-          gap: '1rem', 
+        <div className="form-actions" style={{
+          display: 'flex',
+          gap: '1rem',
           justifyContent: 'center',
           marginTop: '2rem',
           padding: '1rem'
         }}>
-          <button 
-            type="button" 
-            onClick={handleSave}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '500',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = '#218838'}
-            onMouseOut={(e) => e.currentTarget.style.background = '#28a745'}
-          >
-            💾 Save Draft
-          </button>
-          
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             style={{
               padding: '0.75rem 1.5rem',
               background: '#007bff',
@@ -3145,27 +3136,6 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
             onMouseOut={(e) => e.currentTarget.style.background = '#007bff'}
           >
             📤 Submit Application
-          </button>
-          
-          <button 
-            type="button" 
-            onClick={handlePrint}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-              fontWeight: '500',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = '#545b62'}
-            onMouseOut={(e) => e.currentTarget.style.background = '#6c757d'}
-          >
-            🖨️ Print Form
           </button>
         </div>
       </form>

@@ -87,6 +87,7 @@ export interface ExtractedPassportData {
   emiratesResidence?: string;
   areaCode?: string;
   occupation?: string;
+  employer?: string;  // Employer/Company name from Emirates ID back
 
   // VISA specific fields
   visaNumber?: string;
@@ -305,47 +306,35 @@ export async function extractPassportData(imageFileOrBase64: File | string, mime
     if (imageFileOrBase64 instanceof File) {
       const imageFile = imageFileOrBase64;
       
-      // Handle PDF files
+      // Handle PDF files - Send to Gemini Vision API (handles both text-based and scanned PDFs)
       if (imageFile.type === 'application/pdf') {
-        console.log('Processing PDF:', imageFile.name);
-        const pdfText = await extractTextFromPDF(imageFile);
-        console.log('Extracted text from PDF:', pdfText.substring(0, 500) + '...');
+        console.log('📄 Processing PDF with Gemini Vision API:', imageFile.name);
+        console.log('📄 PDF will be converted to base64 and sent to Gemini Vision (supports image-based PDFs)');
 
-        // Parse passport data from text
-        const parsedData = parsePassportDataFromText(pdfText);
+        // Convert PDF to base64
+        base64Data = await fileToBase64(imageFile);
+        finalMimeType = 'application/pdf';
 
-        // Convert dates from DD/MM/YYYY to YYYY-MM-DD for HTML date inputs (PDF path)
-        if (parsedData.dateOfBirth) {
-          const converted = convertDateFormat(parsedData.dateOfBirth);
-          if (converted) parsedData.dateOfBirth = converted;
-        }
-        if (parsedData.dateOfIssue) {
-          const converted = convertDateFormat(parsedData.dateOfIssue);
-          if (converted) parsedData.dateOfIssue = converted;
-        }
-        if (parsedData.dateOfExpiry) {
-          const converted = convertDateFormat(parsedData.dateOfExpiry);
-          if (converted) parsedData.dateOfExpiry = converted;
-        }
+        console.log('📄 PDF converted, size:', imageFile.size, 'bytes');
+        console.log('📄 Base64 length:', base64Data.length);
 
-        // If we got some data, return it
-        if (Object.keys(parsedData).length > 0) {
-          return parsedData;
+        // Skip image validation for PDFs - Gemini Vision can handle them
+        // Fall through to Gemini Vision API processing below
+      } else if (imageFile.type === 'application/msword' ||
+          imageFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        throw new Error('DOC/DOCX files are not yet supported. Please convert your document to PDF format and upload again. You can use free online converters like https://www.ilovepdf.com/word_to_pdf');
+      } else {
+        // Handle image files
+        // Validate file type
+        const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+        if (!supportedTypes.includes(imageFile.type.toLowerCase())) {
+          throw new Error(`Unsupported file type: ${imageFile.type}. Please upload an image file (JPG, PNG, WebP, HEIC, HEIF) or PDF`);
         }
 
-        // If no structured data was found, throw an error
-        throw new Error('Unable to extract passport data from PDF. The PDF might not contain passport information or the text might not be extractable.');
+        // Convert file to base64
+        base64Data = await fileToBase64(imageFile);
+        finalMimeType = imageFile.type;
       }
-
-      // Validate file type
-      const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
-      if (!supportedTypes.includes(imageFile.type.toLowerCase())) {
-        throw new Error(`Unsupported file type: ${imageFile.type}. Please upload an image file (JPG, PNG, etc.)`);
-      }
-
-      // Convert file to base64
-      base64Data = await fileToBase64(imageFile);
-      finalMimeType = imageFile.type;
 
       console.log('📤 FILE UPLOAD DEBUG:');
       console.log('  - File name:', imageFile.name);
@@ -606,7 +595,30 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
       passportData.age = age.toString();
     }
   }
-  
+
+  // ========== CROSS-POPULATION: EMIRATES ID ↔ VISA NUMBER ==========
+  // Emirates ID number and VISA number are the SAME value
+  // If one is present, populate both fields
+  if (passportData.emiratesIdNumber && !passportData.visaNumber) {
+    console.log('📋 Cross-populating: Emirates ID → VISA Number:', passportData.emiratesIdNumber);
+    passportData.visaNumber = passportData.emiratesIdNumber;
+  }
+  if (passportData.visaNumber && !passportData.emiratesIdNumber) {
+    console.log('📋 Cross-populating: VISA Number → Emirates ID:', passportData.visaNumber);
+    passportData.emiratesIdNumber = passportData.visaNumber;
+  }
+
+  // ========== CROSS-POPULATION: EMPLOYER ↔ SPONSOR INFORMATION ==========
+  // Employer (from Emirates ID) and Sponsor Information (from VISA) are the SAME company name
+  if (passportData.employer && !passportData.sponsorInformation) {
+    console.log('🏢 Cross-populating: Employer → Sponsor Information:', passportData.employer);
+    passportData.sponsorInformation = passportData.employer;
+  }
+  if (passportData.sponsorInformation && !passportData.employer) {
+    console.log('🏢 Cross-populating: Sponsor Information → Employer:', passportData.sponsorInformation);
+    passportData.employer = passportData.sponsorInformation;
+  }
+
   // ========== COMPREHENSIVE FIELD MAPPINGS ==========
   // Maps all 46 fields as per FIELD_TO_DOCUMENT_MAPPING_TEMPLATE.md
   const fieldMappings: { [key: string]: string[] } = {
@@ -677,6 +689,9 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
 
     // Field #32 & #43: Occupation - Emirates ID Back
     occupation: ['Occupation', 'Current_Occupation'],
+
+    // Field #30: Employer from Emirates ID Back → Sponsor/Company Name
+    employer: ['Sponsor/Company_Name', 'Sponsor_Information', 'Employer', 'Company_Name'],
 
     fullNameArabic: ['Full_Name_Arabic', 'Name_Arabic', 'Arabic_Name'],
     firstNameEnglish: ['First_Name_English', 'First_Name'],
@@ -754,16 +769,23 @@ export function mapPassportToFormFields(passportData: ExtractedPassportData, for
     'fatherName', 'motherName', 'spouseName', 'address', 'permanentAddress', 'pinCode'
   ];
 
-  const emiratesOnlyFields = ['emiratesIdNumber', 'fullNameArabic', 'firstNameEnglish', 'lastNameEnglish', 'firstNameArabic', 'lastNameArabic', 'emiratesResidence', 'areaCode', 'occupation'];
+  const emiratesOnlyFields = ['fullNameArabic', 'firstNameEnglish', 'lastNameEnglish', 'firstNameArabic', 'lastNameArabic', 'emiratesResidence', 'areaCode'];
   const visaOnlyFields = [
-    'visaNumber', 'controlNumber', 'visaExpiryDate', 'visaIssueDate', 'visaType', 'visaClass', 'visaCategory',
+    'controlNumber', 'visaIssueDate', 'visaType', 'visaClass', 'visaCategory',
     'validUntilDate', 'issuingPostName', 'entries', 'annotation', 'portOfEntry', 'purposeOfVisit',
-    'sponsorInformation', 'durationOfStay', 'entriesAllowed', 'issuingCountry'
+    'durationOfStay', 'entriesAllowed', 'issuingCountry'
   ];
 
   // Shared fields that can come from any document
   // Field #42: Age is auto-calculated
-  const sharedFields = ['age', 'gender', 'nationality']; // Only these can be from any document
+  // Emirates ID number and VISA number are the SAME value - both can be filled from either document
+  // Employer and sponsor information are also the SAME - company name from Emirates ID or VISA
+  const sharedFields = [
+    'age', 'gender', 'nationality',
+    'emiratesIdNumber', 'visaNumber',  // Same ID, different names
+    'visaExpiryDate',  // Can be from VISA or Emirates ID expiry
+    'occupation', 'employer', 'sponsorInformation'  // Company/employer info from either source
+  ]; // Only these can be from any document
 
   // Normalize document type for checking
   const docType = documentType.toLowerCase();
