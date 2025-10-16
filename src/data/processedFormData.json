@@ -162,73 +162,73 @@
       {
         "label": "Uploaded Copies",
         "type": "Uploaded Copies",
-        "comment": "List of uploaded documents",
+        "comment": "Enter Uploaded Copies",
         "inputType": "text"
       },
       {
         "label": "Visa Number",
-        "type": "VISA Number",
-        "comment": "Auto filled from EID or VISA copy ( UIDNO)",
+        "type": "",
+        "comment": "Enter Visa Number",
         "inputType": "text"
       },
       {
         "label": "Sponsor/Company Name",
-        "type": "SPONSOR / COMPANY NAME",
-        "comment": "Auto fill from Sponsor name in VISA copy or Employer Name from Emirates ID)",
+        "type": "",
+        "comment": "Enter Sponsor/Company Name",
         "inputType": "text"
       },
       {
         "label": "Visa Expiry Date",
-        "type": "VISA Expiry Date",
-        "comment": "Auto fill from  VISA copy or  from Emirates ID)",
+        "type": "",
+        "comment": "Enter Visa Expiry Date",
         "inputType": "date"
       },
       {
         "label": "Occupation",
-        "type": "Occupation ",
-        "comment": "Auto fill Visa copy or Occupation from Emirates ID",
+        "type": "",
+        "comment": "Enter Occupation",
         "inputType": "text"
       },
       {
         "label": "Passport Number",
         "type": "Passport Number",
-        "comment": "Auto fill from Passport",
+        "comment": "Enter Passport Number",
         "inputType": "text"
       },
       {
         "label": "Passport Issue Date",
         "type": "Passport Issue Date",
-        "comment": "Auto fill from Passport",
+        "comment": "Enter Passport Issue Date",
         "inputType": "date"
       },
       {
         "label": "Passport Expiry Date",
         "type": "Passport Expiry Date",
-        "comment": "Auto fill from Passport",
+        "comment": "Enter Passport Expiry Date",
         "inputType": "date"
       },
       {
         "label": "Passport Issued Place",
-        "type": "Passport issued Place",
-        "comment": "Auto fill from Passport",
+        "type": "",
+        "comment": "Enter Passport Issued Place",
         "inputType": "text"
       },
       {
         "label": "Date of Birth",
-        "type": "Date Of Birth",
-        "comment": "Auto fill from Passport",
+        "type": "",
+        "comment": "Enter Date of Birth",
         "inputType": "date"
       },
       {
         "label": "Father/Guardian Name",
-        "type": "Name of Father or Guardian",
-        "comment": "Auto fill from Passport",
+        "type": "",
+        "comment": "Enter Father/Guardian Name",
         "inputType": "text"
       },
       {
         "label": "Nominee name",
-        "type": "text",
-        "comment": "",
+        "type": "",
+        "comment": "Enter Nominee name",
         "inputType": "text"
       },
       {
@@ -239,45 +239,33 @@
       },
       {
         "label": "Relationship",
-        "type": "text",
-        "comment": "",
+        "type": "",
+        "comment": "Enter Relationship",
         "inputType": "text"
       },
       {
-        "label": "DOB",
-        "type": "date",
-        "comment": "",
-        "inputType": "date"
-      },
-      {
         "label": "Age autocalculate",
-        "type": "number",
-        "comment": "Auto calculated from DOB",
+        "type": "",
+        "comment": "Enter Age autocalculate",
         "inputType": "number"
       },
       {
         "label": "Current Occupation",
-        "type": "text",
-        "comment": "",
+        "type": "",
+        "comment": "Enter Current Occupation",
         "inputType": "text"
       },
       {
         "label": "Current Residence",
-        "type": "text",
-        "comment": "",
+        "type": "",
+        "comment": "Enter Current Residence",
         "inputType": "text"
       },
       {
         "label": "Mobile number (IND)",
-        "type": "tel",
-        "comment": "",
+        "type": "",
+        "comment": "Enter Mobile number (IND)",
         "inputType": "tel"
-      },
-      {
-        "label": "Percentage",
-        "type": "number",
-        "comment": "",
-        "inputType": "number"
       }
     ]
   },
@@ -466,11 +454,6 @@
         "subLabel": ""
       },
       {
-        "number": 3,
-        "label": "DOB",
-        "subLabel": ""
-      },
-      {
         "number": "",
         "label": "Age autocalculate",
         "subLabel": ""
@@ -488,11 +471,6 @@
       {
         "number": "",
         "label": "Mobile number (IND)",
-        "subLabel": ""
-      },
-      {
-        "number": "",
-        "label": "Percentage",
         "subLabel": ""
       },
       {
