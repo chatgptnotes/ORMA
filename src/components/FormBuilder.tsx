@@ -2724,7 +2724,7 @@ const FormBuilder: React.FC<FormBuilderProps> = ({ formData, onSubmit, initialVa
         <div className="passport-upload-section">
         <div className="upload-header">
           <h3>Please Upload documents as mentioned</h3>
-          <p>Upload passport pages or ID documents to automatically fill the form</p>
+          <p>Upload passport pages or ID documents from this page</p>
         </div>
         
         <div className="upload-grid">
