@@ -52,3 +52,88 @@ coverage/
 *.bak
 *.backup
 *.orig
+
+# Parent directories and sibling projects (git at home directory level)
+../../*
+../*
+!../pulseofproject python/
+
+# Exclude other projects in parent directory
+../pulseofpeople/
+../pulseofproject*/
+../cheripic/
+../aisurgeonpilot.com/
+*.zip
+
+# System files
+../../.CFUserTextEncoding
+../../.bash_history
+../../.bash_profile
+../../.profile
+../../.zprofile
+../../.zsh_history
+../../.zshrc
+../../.viminfo
+../../.gitconfig
+../../.npmrc
+
+# System directories
+../../.adobe/
+../../.android/
+../../.anydesk/
+../../.app-store/
+../../.augment/
+../../.cache/
+../../.claude/
+../../.claude.json
+../../.claude.json.backup
+../../.cocoapods/
+../../.codeium/
+../../.composer/
+../../.config/
+../../.configprops/
+../../.cups/
+../../.cursor/
+../../.datastorage/
+../../.docker/
+../../.expo/
+../../.gradle/
+../../.npm-global/
+../../.npm/
+../../.putty/
+../../.ssh/
+../../.swiftpm/
+../../.th-client/
+../../.trae-aicc/
+../../.trae/
+../../.vim/
+../../.vscode-react-native/
+../../.windsurf/
+../../.zsh_sessions/
+../../Applications/
+../../Desktop/
+../../Documents/
+../../Downloads/
+../../Library/
+../../Movies/
+../../Music/
+../../Pictures/
+../../Public/
+../../Sites/
+
+# Temporary files
+../../.emulator_console_auth_token
+../../postcss.config.js
+../../postcss.config.js.bak
+
+# Project-specific exclusions
+frontend/public/
+setup.sh
+
+# Keep only documentation we want
+!ROADMAP.md
+!IMPLEMENTATION_PHASE_1_COMPLETE.md
+!QUICK_START.md
+!README.md
+!.gitignore
+!Makefile

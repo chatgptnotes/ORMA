@@ -1,32 +1,78 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Exclude everything by default
+*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Allow only the project directory
+!.git/
+!1 imo backups/
+1 imo backups/*
+!1 imo backups/pulseofproject python/
+!1 imo backups/pulseofproject python/**
 
-# Environment variables
-.env
-.env.local
-.env.production
-.env.development
-.env.*
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# System files and directories to ignore
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.vercel
+.CFUserTextEncoding
+.bash_history
+.bash_profile
+.profile
+.zprofile
+.zsh_history
+.zshrc
+.viminfo
+.gitconfig
+.npmrc
+
+# System directories
+.adobe/
+.android/
+.anydesk/
+.app-store/
+.augment/
+.cache/
+.claude/
+.claude.json
+.claude.json.backup
+.cocoapods/
+.codeium/
+.composer/
+.config/
+.configprops/
+.cups/
+.cursor/
+.datastorage/
+.docker/
+.emulator_console_auth_token
+.expo/
+.gradle/
+.npm-global/
+.npm/
+.putty/
+.ssh/
+.swiftpm/
+.th-client/
+.trae-aicc/
+.trae/
+.vim/
+.vscode-react-native/
+.windsurf/
+.zsh_sessions/
+
+# User directories (exclude all except our project)
+Applications/
+Desktop/
+Documents/
+Downloads/
+Library/
+Movies/
+Music/
+Pictures/
+Public/
+Sites/
+
+# Other projects in 1 imo backups
+1 imo backups/pulseofpeople/
+1 imo backups/cheripic/
+1 imo backups/aisurgeonpilot.com/
+1 imo backups/*.zip
+
+postcss.config.js
+postcss.config.js.bak
