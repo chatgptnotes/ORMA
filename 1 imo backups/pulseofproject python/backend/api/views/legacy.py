@@ -3,9 +3,13 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth.models import User
-from api.models import UserProfile, Task, Notification
-from api.serializers import UserSerializer, UserProfileSerializer, TaskSerializer, NotificationSerializer
+from api.models import UserProfile, Task, Notification, UploadedFile
+from api.serializers import UserSerializer, UserProfileSerializer, TaskSerializer, NotificationSerializer, UploadedFileSerializer
+import os
+import uuid
+from supabase import create_client, Client
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -114,3 +118,186 @@ class NotificationViewSet(viewsets.ModelViewSet):
             is_read=False
         ).count()
         return Response({'unread_count': count})
+
+
+class UploadedFileViewSet(viewsets.ModelViewSet):
+    """ViewSet for file upload management with Supabase Storage"""
+    queryset = UploadedFile.objects.all()
+    serializer_class = UploadedFileSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        """Users can only see their own files"""
+        return UploadedFile.objects.filter(user=self.request.user)
+
+    def get_supabase_client(self):
+        """Initialize Supabase client"""
+        from django.conf import settings
+        return create_client(
+            settings.SUPABASE_URL,
+            settings.SUPABASE_SERVICE_KEY
+        )
+
+    def determine_file_category(self, mime_type):
+        """Determine file category from MIME type"""
+        if mime_type.startswith('image/'):
+            return 'image'
+        elif mime_type.startswith('video/'):
+            return 'video'
+        elif mime_type.startswith('audio/'):
+            return 'audio'
+        elif mime_type in ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+            return 'document'
+        elif mime_type in ['application/zip', 'application/x-rar-compressed', 'application/x-7z-compressed']:
+            return 'archive'
+        else:
+            return 'other'
+
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        """
+        Upload file to Supabase Storage
+
+        Expected fields:
+        - file: File object (required)
+        - bucket_id: Storage bucket (default: 'user-files')
+        - metadata: JSON metadata (optional)
+        """
+        try:
+            # Validate file
+            if 'file' not in request.FILES:
+                return Response(
+                    {'error': 'No file provided'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            uploaded_file = request.FILES['file']
+
+            # File size limit (50MB)
+            MAX_FILE_SIZE = 50 * 1024 * 1024
+            if uploaded_file.size > MAX_FILE_SIZE:
+                return Response(
+                    {'error': f'File size exceeds maximum limit of 50MB'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Generate unique filename
+            file_ext = os.path.splitext(uploaded_file.name)[1]
+            unique_filename = f"{uuid.uuid4()}{file_ext}"
+
+            # Get bucket_id from request or use default
+            bucket_id = request.data.get('bucket_id', 'user-files')
+
+            # Build storage path: user_id/unique_filename
+            user_folder = str(request.user.id)
+            storage_path = f"{user_folder}/{unique_filename}"
+
+            # Upload to Supabase Storage
+            supabase = self.get_supabase_client()
+
+            # Read file content
+            file_content = uploaded_file.read()
+
+            # Upload to Supabase
+            upload_response = supabase.storage.from_(bucket_id).upload(
+                path=storage_path,
+                file=file_content,
+                file_options={
+                    "content-type": uploaded_file.content_type,
+                    "x-upsert": "false"
+                }
+            )
+
+            # Get public URL
+            public_url = supabase.storage.from_(bucket_id).get_public_url(storage_path)
+
+            # Create database record
+            file_category = self.determine_file_category(uploaded_file.content_type)
+
+            file_metadata = request.data.get('metadata', {})
+            if isinstance(file_metadata, str):
+                import json
+                file_metadata = json.loads(file_metadata)
+
+            uploaded_file_obj = UploadedFile.objects.create(
+                user=request.user,
+                filename=unique_filename,
+                original_filename=uploaded_file.name,
+                file_size=uploaded_file.size,
+                mime_type=uploaded_file.content_type,
+                storage_path=storage_path,
+                storage_url=public_url,
+                bucket_id=bucket_id,
+                file_category=file_category,
+                metadata=file_metadata
+            )
+
+            serializer = self.get_serializer(uploaded_file_obj)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': f'Upload failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['delete'])
+    def delete_file(self, request, pk=None):
+        """Delete file from Supabase Storage and database"""
+        try:
+            file_obj = self.get_object()
+
+            # Delete from Supabase Storage
+            supabase = self.get_supabase_client()
+            supabase.storage.from_(file_obj.bucket_id).remove([file_obj.storage_path])
+
+            # Delete from database
+            file_obj.delete()
+
+            return Response(
+                {'message': 'File deleted successfully'},
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Delete failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def download_url(self, request, pk=None):
+        """Get temporary download URL for file"""
+        try:
+            file_obj = self.get_object()
+
+            # Get signed URL (valid for 1 hour)
+            supabase = self.get_supabase_client()
+            signed_url = supabase.storage.from_(file_obj.bucket_id).create_signed_url(
+                file_obj.storage_path,
+                expires_in=3600
+            )
+
+            return Response({
+                'download_url': signed_url['signedURL'],
+                'expires_in': 3600
+            })
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to generate download URL: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['get'])
+    def by_category(self, request):
+        """Get files filtered by category"""
+        category = request.query_params.get('category')
+        if not category:
+            return Response(
+                {'error': 'Category parameter required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        files = self.get_queryset().filter(file_category=category)
+        serializer = self.get_serializer(files, many=True)
+        return Response(serializer.data)

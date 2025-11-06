@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile, Task, Permission, Notification
+from .models import UserProfile, Task, Permission, Notification, UploadedFile
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -107,3 +107,44 @@ class NotificationSerializer(serializers.ModelSerializer):
         """Auto-assign user from request"""
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    """Serializer for uploaded files"""
+    username = serializers.CharField(source='user.username', read_only=True)
+    file_extension = serializers.SerializerMethodField()
+    human_readable_size = serializers.SerializerMethodField()
+    is_image = serializers.SerializerMethodField()
+    is_video = serializers.SerializerMethodField()
+    is_audio = serializers.SerializerMethodField()
+    is_document = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UploadedFile
+        fields = [
+            'id', 'user', 'username', 'filename', 'original_filename',
+            'file_size', 'mime_type', 'storage_path', 'storage_url',
+            'bucket_id', 'file_category', 'metadata',
+            'file_extension', 'human_readable_size',
+            'is_image', 'is_video', 'is_audio', 'is_document',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+    def get_file_extension(self, obj):
+        return obj.get_file_extension()
+
+    def get_human_readable_size(self, obj):
+        return obj.get_human_readable_size()
+
+    def get_is_image(self, obj):
+        return obj.is_image()
+
+    def get_is_video(self, obj):
+        return obj.is_video()
+
+    def get_is_audio(self, obj):
+        return obj.is_audio()
+
+    def get_is_document(self, obj):
+        return obj.is_document()

@@ -319,3 +319,87 @@ class Task(models.Model):
         verbose_name = "Task"
         verbose_name_plural = "Tasks"
         ordering = ['-created_at']
+
+
+class UploadedFile(models.Model):
+    """
+    Uploaded File model for tracking files stored in Supabase Storage
+    Stores metadata while actual files are in Supabase Storage buckets
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='uploaded_files')
+
+    # File information
+    filename = models.CharField(max_length=255, help_text="Stored filename")
+    original_filename = models.CharField(max_length=255, help_text="Original uploaded filename")
+    file_size = models.BigIntegerField(help_text="File size in bytes")
+    mime_type = models.CharField(max_length=100)
+
+    # Storage information
+    storage_path = models.CharField(max_length=500, help_text="Path in Supabase Storage")
+    storage_url = models.URLField(max_length=500, help_text="Public URL from Supabase")
+    bucket_id = models.CharField(max_length=100, default='user-files')
+
+    # File categorization
+    file_category = models.CharField(
+        max_length=50,
+        choices=[
+            ('document', 'Document'),
+            ('image', 'Image'),
+            ('video', 'Video'),
+            ('audio', 'Audio'),
+            ('archive', 'Archive'),
+            ('other', 'Other'),
+        ],
+        default='document'
+    )
+
+    # Additional metadata
+    metadata = models.JSONField(default=dict, blank=True, help_text="Additional file metadata")
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['file_category']),
+            models.Index(fields=['mime_type']),
+        ]
+        verbose_name = "Uploaded File"
+        verbose_name_plural = "Uploaded Files"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.original_filename}"
+
+    def get_file_extension(self):
+        """Get file extension from original filename"""
+        import os
+        return os.path.splitext(self.original_filename)[1].lower()
+
+    def is_image(self):
+        """Check if file is an image"""
+        return self.mime_type.startswith('image/')
+
+    def is_video(self):
+        """Check if file is a video"""
+        return self.mime_type.startswith('video/')
+
+    def is_audio(self):
+        """Check if file is audio"""
+        return self.mime_type.startswith('audio/')
+
+    def is_document(self):
+        """Check if file is a document"""
+        doc_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument']
+        return any(self.mime_type.startswith(dtype) for dtype in doc_types)
+
+    def get_human_readable_size(self):
+        """Convert file size to human readable format"""
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if size < 1024.0:
+                return f"{size:.2f} {unit}"
+            size /= 1024.0
+        return f"{size:.2f} PB"

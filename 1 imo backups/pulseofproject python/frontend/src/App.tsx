@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import FilesPage from './pages/FilesPage';
 import SuperAdminDashboardNew from './pages/superadmin/SuperAdminDashboardNew';
 import Subdomains from './pages/superadmin/Subdomains';
 import LandingPages from './pages/superadmin/LandingPages';
@@ -58,6 +59,16 @@ function App() {
           <Route path="/register" element={<Layout><Register /></Layout>} />
           <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+
+          {/* Files Route - Requires authentication */}
+          <Route
+            path="/files"
+            element={
+              <ProtectedRoute>
+                <Layout><FilesPage /></Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* SuperAdmin Routes - All require authentication */}
           <Route

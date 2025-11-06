@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from api.views import UserViewSet, UserProfileViewSet, TaskViewSet, NotificationViewSet, health_check, profile_me
+from api.views import UserViewSet, UserProfileViewSet, TaskViewSet, NotificationViewSet, UploadedFileViewSet, health_check, profile_me
 
 # Create router for viewsets (legacy routes)
 router = DefaultRouter()
@@ -9,6 +9,7 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'profiles', UserProfileViewSet, basename='profile')
 router.register(r'tasks', TaskViewSet, basename='task')
 router.register(r'notifications', NotificationViewSet, basename='notification')
+router.register(r'files', UploadedFileViewSet, basename='file')
 
 urlpatterns = [
     # Health check
