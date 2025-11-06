@@ -29,6 +29,14 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# Production domains
+if not DEBUG:
+    ALLOWED_HOSTS.extend([
+        'pulseofpeople.com',
+        'www.pulseofpeople.com',
+        'api.pulseofpeople.com',
+    ])
+
 
 # Application definition
 
@@ -208,6 +216,14 @@ CORS_ALLOWED_ORIGINS = config(
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
+# Production domains
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS.extend([
+        'https://pulseofpeople.com',
+        'https://www.pulseofpeople.com',
+        'https://api.pulseofpeople.com',
+    ])
+
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOW_METHODS = [
@@ -230,3 +246,29 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+# Security Settings for Production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# CSRF trusted origins
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:5173,http://127.0.0.1:5173',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
+
+if not DEBUG:
+    CSRF_TRUSTED_ORIGINS.extend([
+        'https://pulseofpeople.com',
+        'https://www.pulseofpeople.com',
+        'https://api.pulseofpeople.com',
+    ])
